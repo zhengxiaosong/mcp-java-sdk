@@ -1099,7 +1099,7 @@ public interface McpServer {
 		 * @see #rootsChangeHandlers(List)
 		 */
 		public SyncSpecification rootsChangeHandlers(
-				BiConsumer<McpSyncServerExchange, List<McpSchema.Root>>... handlers) {
+				@SuppressWarnings("unchecked") BiConsumer<McpSyncServerExchange, List<McpSchema.Root>>... handlers) {
 			Assert.notNull(handlers, "Handlers list must not be null");
 			return this.rootsChangeHandlers(List.of(handlers));
 		}

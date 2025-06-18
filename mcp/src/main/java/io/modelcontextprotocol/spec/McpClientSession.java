@@ -277,7 +277,7 @@ public class McpClientSession implements McpSession {
 	 */
 	@Override
 	public Mono<Void> closeGracefully() {
-		return Mono.defer(() -> {
+		return Mono.<Void>defer(() -> {
 			this.connection.dispose();
 			return transport.closeGracefully();
 		});

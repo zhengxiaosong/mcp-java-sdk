@@ -16,6 +16,7 @@ public class BlockingInputStream extends InputStream {
 
 	private volatile boolean closed = false;
 
+	@SuppressWarnings("null")
 	@Override
 	public int read() throws IOException {
 		if (closed) {

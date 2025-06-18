@@ -112,7 +112,7 @@ public abstract class AbstractMcpAsyncClientTests {
 
 	<T> void verifyInitializationTimeout(Function<McpAsyncClient, Mono<T>> operation, String action) {
 		withClient(createMcpTransport(), mcpAsyncClient -> {
-			StepVerifier.withVirtualTime(() -> operation.apply(mcpAsyncClient))
+			StepVerifier.<T>withVirtualTime(() -> operation.apply(mcpAsyncClient))
 				.expectSubscription()
 				.thenAwait(getInitializationTimeout())
 				.consumeErrorWith(e -> assertThat(e).isInstanceOf(McpError.class)
