@@ -3,6 +3,7 @@
  */
 package io.modelcontextprotocol.server.transport;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,10 +38,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
-import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -60,6 +64,10 @@ class HttpServletSseServerTransportProviderIntegrationTests {
 	McpClient.SyncSpec clientBuilder;
 
 	private Tomcat tomcat;
+
+	private RestTemplate restTemplate;
+
+	private ObjectMapper objectMapper;
 
 	@BeforeEach
 	public void before() {
@@ -82,6 +90,9 @@ class HttpServletSseServerTransportProviderIntegrationTests {
 		this.clientBuilder = McpClient.sync(HttpClientSseClientTransport.builder("http://localhost:" + PORT)
 			.sseEndpoint(CUSTOM_SSE_ENDPOINT)
 			.build());
+
+		this.restTemplate = new RestTemplate();
+		this.objectMapper = new ObjectMapper();
 	}
 
 	@AfterEach
@@ -516,11 +527,9 @@ class HttpServletSseServerTransportProviderIntegrationTests {
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
 				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
-					String response = RestClient.create()
-						.get()
-						.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
-						.retrieve()
-						.body(String.class);
+					String response = restTemplate.getForObject(
+							"https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md",
+							String.class);
 					assertThat(response).isNotBlank();
 					return callResponse;
 				});
@@ -552,11 +561,9 @@ class HttpServletSseServerTransportProviderIntegrationTests {
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
 				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
-					String response = RestClient.create()
-						.get()
-						.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
-						.retrieve()
-						.body(String.class);
+					String response = restTemplate.getForObject(
+							"https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md",
+							String.class);
 					assertThat(response).isNotBlank();
 					return callResponse;
 				});
@@ -570,11 +577,9 @@ class HttpServletSseServerTransportProviderIntegrationTests {
 
 		try (var mcpClient = clientBuilder.toolsChangeConsumer(toolsUpdate -> {
 			// perform a blocking call to a remote service
-			String response = RestClient.create()
-				.get()
-				.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
-				.retrieve()
-				.body(String.class);
+			String response = restTemplate.getForObject(
+					"https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md",
+					String.class);
 			assertThat(response).isNotBlank();
 			rootsRef.set(toolsUpdate);
 		}).build()) {
@@ -743,6 +748,79 @@ class HttpServletSseServerTransportProviderIntegrationTests {
 			});
 		}
 		mcpServer.close();
+	}
+
+	@Test
+	void testSendingRequestToNonExistentEndpoint() {
+		RequestEntity<McpSchema.JSONRPCRequest> request = RequestEntity
+			.post(URI.create(String.format("http://localhost:%d/bad-endpoint", PORT)))
+			.contentType(MediaType.APPLICATION_JSON)
+			.body(new McpSchema.JSONRPCRequest(McpSchema.JSONRPC_VERSION, "test", 1, "Hello, World!"));
+		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void testSendingRequestWithInvalidContentType() {
+		RequestEntity<McpSchema.JSONRPCRequest> request = RequestEntity
+			.post(URI.create(String.format("http://localhost:%d%s", PORT, CUSTOM_MESSAGE_ENDPOINT)))
+			.contentType(MediaType.TEXT_PLAIN)
+			.body(new McpSchema.JSONRPCRequest(McpSchema.JSONRPC_VERSION, "test", 1, "Hello, World!"));
+		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+	}
+
+	@Test
+	void testSendingInvalidJsonRpcMessage() {
+		RequestEntity<String> request = RequestEntity
+			.post(URI.create(String.format("http://localhost:%d%s", PORT, CUSTOM_MESSAGE_ENDPOINT)))
+			.contentType(MediaType.APPLICATION_JSON)
+			.body("invalid json");
+		ResponseEntity<String> response = restTemplate.exchange(request, String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void testHandleMessageRequest() throws Exception {
+		ResponseEntity<String> response = sendRequest("test", "Hello, World!");
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+
+		McpSchema.JSONRPCResponse responseMessage = objectMapper.readValue(response.getBody(),
+				McpSchema.JSONRPCResponse.class);
+		assertThat(responseMessage.result()).isEqualTo("Hello, World!");
+	}
+
+	@Test
+	void testHandleMessageRequestWithError() throws Exception {
+		ResponseEntity<String> response = sendRequest("error", null);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+		assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+
+		McpSchema.JSONRPCResponse responseMessage = objectMapper.readValue(response.getBody(),
+				McpSchema.JSONRPCResponse.class);
+		assertThat(responseMessage.error()).isNotNull();
+		assertThat(responseMessage.error().message()).isEqualTo("Test error");
+	}
+
+	@Test
+	void testHandleMessageRequestWithInvalidMethod() throws Exception {
+		ResponseEntity<String> response = sendRequest("invalid", null);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+		assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+
+		McpSchema.JSONRPCResponse responseMessage = objectMapper.readValue(response.getBody(),
+				McpSchema.JSONRPCResponse.class);
+		assertThat(responseMessage.error()).isNotNull();
+		assertThat(responseMessage.error().message()).isEqualTo("Method not found: invalid");
+	}
+
+	private ResponseEntity<String> sendRequest(String method, Object params) {
+		RequestEntity<McpSchema.JSONRPCRequest> request = RequestEntity
+			.post(URI.create(String.format("http://localhost:%d%s", PORT, CUSTOM_MESSAGE_ENDPOINT)))
+			.contentType(MediaType.APPLICATION_JSON)
+			.body(new McpSchema.JSONRPCRequest(McpSchema.JSONRPC_VERSION, method, 1, params));
+		return restTemplate.exchange(request, String.class);
 	}
 
 }

@@ -36,7 +36,7 @@ import reactor.test.StepVerifier;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.ServerResponse;
@@ -47,6 +47,9 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 
 class WebMvcSseIntegrationTests {
+
+	// 在类中添加 RestTemplate 实例
+	private final RestTemplate restTemplate = new RestTemplate();
 
 	private static final int PORT = TestUtil.findAvailablePort();
 
@@ -537,11 +540,9 @@ class WebMvcSseIntegrationTests {
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
 				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
-					String response = RestClient.create()
-						.get()
-						.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
-						.retrieve()
-						.body(String.class);
+					String response = restTemplate.getForObject(
+							"https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md",
+							String.class);
 					assertThat(response).isNotBlank();
 					return callResponse;
 				});
@@ -573,11 +574,9 @@ class WebMvcSseIntegrationTests {
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
 				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
-					String response = RestClient.create()
-						.get()
-						.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
-						.retrieve()
-						.body(String.class);
+					String response = restTemplate.getForObject(
+							"https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md",
+							String.class);
 					assertThat(response).isNotBlank();
 					return callResponse;
 				});
@@ -591,11 +590,9 @@ class WebMvcSseIntegrationTests {
 
 		try (var mcpClient = clientBuilder.toolsChangeConsumer(toolsUpdate -> {
 			// perform a blocking call to a remote service
-			String response = RestClient.create()
-				.get()
-				.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
-				.retrieve()
-				.body(String.class);
+			String response = restTemplate.getForObject(
+					"https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md",
+					String.class);
 			assertThat(response).isNotBlank();
 			rootsRef.set(toolsUpdate);
 		}).build()) {

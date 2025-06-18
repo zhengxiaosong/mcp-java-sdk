@@ -26,7 +26,6 @@ import io.modelcontextprotocol.server.transport.WebFluxSseServerTransportProvide
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.*;
-import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities.CompletionCapabilities;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,7 +35,6 @@ import reactor.netty.http.server.HttpServer;
 
 import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
-import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 
@@ -527,11 +525,12 @@ class WebFluxSseIntegrationTests {
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
 				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
-					String response = RestClient.create()
+					String response = WebClient.create()
 						.get()
 						.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
 						.retrieve()
-						.body(String.class);
+						.bodyToMono(String.class)
+						.block();
 					assertThat(response).isNotBlank();
 					return callResponse;
 				});
@@ -567,11 +566,12 @@ class WebFluxSseIntegrationTests {
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
 				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
-					String response = RestClient.create()
+					String response = WebClient.create()
 						.get()
 						.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
 						.retrieve()
-						.body(String.class);
+						.bodyToMono(String.class)
+						.block();
 					assertThat(response).isNotBlank();
 					return callResponse;
 				});
@@ -585,11 +585,12 @@ class WebFluxSseIntegrationTests {
 
 		try (var mcpClient = clientBuilder.toolsChangeConsumer(toolsUpdate -> {
 			// perform a blocking call to a remote service
-			String response = RestClient.create()
+			String response = WebClient.create()
 				.get()
 				.uri("https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md")
 				.retrieve()
-				.body(String.class);
+				.bodyToMono(String.class)
+				.block();
 			assertThat(response).isNotBlank();
 			rootsRef.set(toolsUpdate);
 		}).build()) {
