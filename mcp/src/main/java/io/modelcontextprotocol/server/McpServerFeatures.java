@@ -52,12 +52,25 @@ public class McpServerFeatures {
 	 * roots list changes
 	 * @param instructions The server instructions text
 	 */
-	record Async(Implementation serverInfo, ServerCapabilities serverCapabilities,
-			List<McpServerFeatures.AsyncToolSpecification> tools, Map<String, AsyncResourceSpecification> resources,
-			List<ResourceTemplate> resourceTemplates, Map<String, McpServerFeatures.AsyncPromptSpecification> prompts,
-			Map<CompleteReference, McpServerFeatures.AsyncCompletionSpecification> completions,
-			List<BiFunction<McpAsyncServerExchange, List<Root>, Mono<Void>>> rootsChangeConsumers,
-			String instructions) {
+	public static class Async {
+
+		private final Implementation serverInfo;
+
+		private final ServerCapabilities serverCapabilities;
+
+		private final List<McpServerFeatures.AsyncToolSpecification> tools;
+
+		private final Map<String, AsyncResourceSpecification> resources;
+
+		private final List<ResourceTemplate> resourceTemplates;
+
+		private final Map<String, McpServerFeatures.AsyncPromptSpecification> prompts;
+
+		private final Map<CompleteReference, McpServerFeatures.AsyncCompletionSpecification> completions;
+
+		private final List<BiFunction<McpAsyncServerExchange, List<Root>, Mono<Void>>> rootsChangeConsumers;
+
+		private final String instructions;
 
 		/**
 		 * Create an instance and validate the arguments.
@@ -101,6 +114,42 @@ public class McpServerFeatures {
 			this.instructions = instructions;
 		}
 
+		public Implementation serverInfo() {
+			return this.serverInfo;
+		}
+
+		public ServerCapabilities serverCapabilities() {
+			return this.serverCapabilities;
+		}
+
+		public List<McpServerFeatures.AsyncToolSpecification> tools() {
+			return this.tools;
+		}
+
+		public Map<String, AsyncResourceSpecification> resources() {
+			return this.resources;
+		}
+
+		public List<ResourceTemplate> resourceTemplates() {
+			return this.resourceTemplates;
+		}
+
+		public Map<String, McpServerFeatures.AsyncPromptSpecification> prompts() {
+			return this.prompts;
+		}
+
+		public Map<CompleteReference, McpServerFeatures.AsyncCompletionSpecification> completions() {
+			return this.completions;
+		}
+
+		public List<BiFunction<McpAsyncServerExchange, List<Root>, Mono<Void>>> rootsChangeConsumers() {
+			return this.rootsChangeConsumers;
+		}
+
+		public String instructions() {
+			return this.instructions;
+		}
+
 		/**
 		 * Convert a synchronous specification into an asynchronous one and provide
 		 * blocking code offloading to prevent accidental blocking of the non-blocking
@@ -141,6 +190,7 @@ public class McpServerFeatures {
 			return new Async(syncSpec.serverInfo(), syncSpec.serverCapabilities(), tools, resources,
 					syncSpec.resourceTemplates(), prompts, completions, rootChangeConsumers, syncSpec.instructions());
 		}
+
 	}
 
 	/**
@@ -156,12 +206,25 @@ public class McpServerFeatures {
 	 * roots list changes
 	 * @param instructions The server instructions text
 	 */
-	record Sync(Implementation serverInfo, ServerCapabilities serverCapabilities,
-			List<McpServerFeatures.SyncToolSpecification> tools,
-			Map<String, McpServerFeatures.SyncResourceSpecification> resources,
-			List<ResourceTemplate> resourceTemplates, Map<String, McpServerFeatures.SyncPromptSpecification> prompts,
-			Map<CompleteReference, McpServerFeatures.SyncCompletionSpecification> completions,
-			List<BiConsumer<McpSyncServerExchange, List<Root>>> rootsChangeConsumers, String instructions) {
+	public static class Sync {
+
+		private final Implementation serverInfo;
+
+		private final ServerCapabilities serverCapabilities;
+
+		private final List<McpServerFeatures.SyncToolSpecification> tools;
+
+		private final Map<String, McpServerFeatures.SyncResourceSpecification> resources;
+
+		private final List<ResourceTemplate> resourceTemplates;
+
+		private final Map<String, McpServerFeatures.SyncPromptSpecification> prompts;
+
+		private final Map<CompleteReference, McpServerFeatures.SyncCompletionSpecification> completions;
+
+		private final List<BiConsumer<McpSyncServerExchange, List<Root>>> rootsChangeConsumers;
+
+		private final String instructions;
 
 		/**
 		 * Create an instance and validate the arguments.
@@ -203,6 +266,42 @@ public class McpServerFeatures {
 			this.completions = (completions != null) ? completions : new HashMap<>();
 			this.rootsChangeConsumers = (rootsChangeConsumers != null) ? rootsChangeConsumers : new ArrayList<>();
 			this.instructions = instructions;
+		}
+
+		public Implementation serverInfo() {
+			return this.serverInfo;
+		}
+
+		public ServerCapabilities serverCapabilities() {
+			return this.serverCapabilities;
+		}
+
+		public List<McpServerFeatures.SyncToolSpecification> tools() {
+			return this.tools;
+		}
+
+		public Map<String, McpServerFeatures.SyncResourceSpecification> resources() {
+			return this.resources;
+		}
+
+		public List<ResourceTemplate> resourceTemplates() {
+			return this.resourceTemplates;
+		}
+
+		public Map<String, McpServerFeatures.SyncPromptSpecification> prompts() {
+			return this.prompts;
+		}
+
+		public Map<CompleteReference, McpServerFeatures.SyncCompletionSpecification> completions() {
+			return this.completions;
+		}
+
+		public List<BiConsumer<McpSyncServerExchange, List<Root>>> rootsChangeConsumers() {
+			return this.rootsChangeConsumers;
+		}
+
+		public String instructions() {
+			return this.instructions;
 		}
 
 	}
@@ -266,8 +365,25 @@ public class McpServerFeatures {
 	 * interact with the connected client. The second arguments is a
 	 * {@link io.modelcontextprotocol.spec.ReadResourceRequest}.
 	 */
-	public record AsyncResourceSpecification(Resource resource,
-			BiFunction<McpAsyncServerExchange, ReadResourceRequest, Mono<ReadResourceResult>> readHandler) {
+	public static class AsyncResourceSpecification {
+
+		private final Resource resource;
+
+		private final BiFunction<McpAsyncServerExchange, ReadResourceRequest, Mono<ReadResourceResult>> readHandler;
+
+		public AsyncResourceSpecification(Resource resource,
+				BiFunction<McpAsyncServerExchange, ReadResourceRequest, Mono<ReadResourceResult>> readHandler) {
+			this.resource = resource;
+			this.readHandler = readHandler;
+		}
+
+		public Resource resource() {
+			return this.resource;
+		}
+
+		public BiFunction<McpAsyncServerExchange, ReadResourceRequest, Mono<ReadResourceResult>> readHandler() {
+			return this.readHandler;
+		}
 
 		static AsyncResourceSpecification fromSync(SyncResourceSpecification resource) {
 			// FIXME: This is temporary, proper validation should be implemented
@@ -279,6 +395,7 @@ public class McpServerFeatures {
 						.fromCallable(() -> resource.readHandler().apply(new McpSyncServerExchange(exchange), req))
 						.subscribeOn(Schedulers.boundedElastic()));
 		}
+
 	}
 
 	/**
@@ -312,8 +429,25 @@ public class McpServerFeatures {
 	 * connected client. The second arguments is a
 	 * {@link io.modelcontextprotocol.spec.GetPromptRequest}.
 	 */
-	public record AsyncPromptSpecification(Prompt prompt,
-			BiFunction<McpAsyncServerExchange, GetPromptRequest, Mono<GetPromptResult>> promptHandler) {
+	public static class AsyncPromptSpecification {
+
+		private final Prompt prompt;
+
+		private final BiFunction<McpAsyncServerExchange, GetPromptRequest, Mono<GetPromptResult>> promptHandler;
+
+		public AsyncPromptSpecification(Prompt prompt,
+				BiFunction<McpAsyncServerExchange, GetPromptRequest, Mono<GetPromptResult>> promptHandler) {
+			this.prompt = prompt;
+			this.promptHandler = promptHandler;
+		}
+
+		public Prompt prompt() {
+			return this.prompt;
+		}
+
+		public BiFunction<McpAsyncServerExchange, GetPromptRequest, Mono<GetPromptResult>> promptHandler() {
+			return this.promptHandler;
+		}
 
 		static AsyncPromptSpecification fromSync(SyncPromptSpecification prompt) {
 			// FIXME: This is temporary, proper validation should be implemented
@@ -325,6 +459,7 @@ public class McpServerFeatures {
 						.fromCallable(() -> prompt.promptHandler().apply(new McpSyncServerExchange(exchange), req))
 						.subscribeOn(Schedulers.boundedElastic()));
 		}
+
 	}
 
 	/**
@@ -343,8 +478,25 @@ public class McpServerFeatures {
 	 * {@link McpAsyncServerExchange} used to interact with the client. The second
 	 * argument is a {@link io.modelcontextprotocol.spec.CompleteRequest}.
 	 */
-	public record AsyncCompletionSpecification(CompleteReference referenceKey,
-			BiFunction<McpAsyncServerExchange, CompleteRequest, Mono<CompleteResult>> completionHandler) {
+	public static class AsyncCompletionSpecification {
+
+		private final CompleteReference referenceKey;
+
+		private final BiFunction<McpAsyncServerExchange, CompleteRequest, Mono<CompleteResult>> completionHandler;
+
+		public AsyncCompletionSpecification(CompleteReference referenceKey,
+				BiFunction<McpAsyncServerExchange, CompleteRequest, Mono<CompleteResult>> completionHandler) {
+			this.referenceKey = referenceKey;
+			this.completionHandler = completionHandler;
+		}
+
+		public CompleteReference referenceKey() {
+			return this.referenceKey;
+		}
+
+		public BiFunction<McpAsyncServerExchange, CompleteRequest, Mono<CompleteResult>> completionHandler() {
+			return this.completionHandler;
+		}
 
 		/**
 		 * Converts a synchronous {@link SyncCompletionSpecification} into an
@@ -363,6 +515,7 @@ public class McpServerFeatures {
 							() -> completion.completionHandler().apply(new McpSyncServerExchange(exchange), request))
 						.subscribeOn(Schedulers.boundedElastic()));
 		}
+
 	}
 
 	public static final class SyncToolSpecification {
@@ -415,8 +568,26 @@ public class McpServerFeatures {
 	 * interact with the connected client. The second arguments is a
 	 * {@link io.modelcontextprotocol.spec.ReadResourceRequest}.
 	 */
-	public record SyncResourceSpecification(Resource resource,
-			BiFunction<McpSyncServerExchange, ReadResourceRequest, ReadResourceResult> readHandler) {
+	public static class SyncResourceSpecification {
+
+		private final Resource resource;
+
+		private final BiFunction<McpSyncServerExchange, ReadResourceRequest, ReadResourceResult> readHandler;
+
+		public SyncResourceSpecification(Resource resource,
+				BiFunction<McpSyncServerExchange, ReadResourceRequest, ReadResourceResult> readHandler) {
+			this.resource = resource;
+			this.readHandler = readHandler;
+		}
+
+		public Resource resource() {
+			return this.resource;
+		}
+
+		public BiFunction<McpSyncServerExchange, ReadResourceRequest, ReadResourceResult> readHandler() {
+			return this.readHandler;
+		}
+
 	}
 
 	/**
@@ -450,8 +621,26 @@ public class McpServerFeatures {
 	 * client. The second arguments is a
 	 * {@link io.modelcontextprotocol.spec.GetPromptRequest}.
 	 */
-	public record SyncPromptSpecification(Prompt prompt,
-			BiFunction<McpSyncServerExchange, GetPromptRequest, GetPromptResult> promptHandler) {
+	public static class SyncPromptSpecification {
+
+		private final Prompt prompt;
+
+		private final BiFunction<McpSyncServerExchange, GetPromptRequest, GetPromptResult> promptHandler;
+
+		public SyncPromptSpecification(Prompt prompt,
+				BiFunction<McpSyncServerExchange, GetPromptRequest, GetPromptResult> promptHandler) {
+			this.prompt = prompt;
+			this.promptHandler = promptHandler;
+		}
+
+		public Prompt prompt() {
+			return this.prompt;
+		}
+
+		public BiFunction<McpSyncServerExchange, GetPromptRequest, GetPromptResult> promptHandler() {
+			return this.promptHandler;
+		}
+
 	}
 
 	/**
@@ -463,8 +652,26 @@ public class McpServerFeatures {
 	 * {@link McpSyncServerExchange} used to interact with the client. The second argument
 	 * is a {@link io.modelcontextprotocol.spec.CompleteRequest}.
 	 */
-	public record SyncCompletionSpecification(CompleteReference referenceKey,
-			BiFunction<McpSyncServerExchange, CompleteRequest, CompleteResult> completionHandler) {
+	public static class SyncCompletionSpecification {
+
+		private final CompleteReference referenceKey;
+
+		private final BiFunction<McpSyncServerExchange, CompleteRequest, CompleteResult> completionHandler;
+
+		public SyncCompletionSpecification(CompleteReference referenceKey,
+				BiFunction<McpSyncServerExchange, CompleteRequest, CompleteResult> completionHandler) {
+			this.referenceKey = referenceKey;
+			this.completionHandler = completionHandler;
+		}
+
+		public CompleteReference referenceKey() {
+			return this.referenceKey;
+		}
+
+		public BiFunction<McpSyncServerExchange, CompleteRequest, CompleteResult> completionHandler() {
+			return this.completionHandler;
+		}
+
 	}
 
 	public interface RootsChangeHandler extends BiFunction<McpSyncServerExchange, List<Root>, Mono<Void>> {

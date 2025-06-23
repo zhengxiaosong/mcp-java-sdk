@@ -165,7 +165,8 @@ public class McpServerSession implements McpSession {
 		return Mono.defer(() -> {
 			// TODO handle errors for communication to without initialization happening
 			// first
-			if (message instanceof JSONRPCResponse response) {
+			if (message instanceof JSONRPCResponse) {
+				JSONRPCResponse response = (JSONRPCResponse) message;
 				logger.debug("Received Response: {}", response);
 				var sink = pendingResponses.remove(response.getId());
 				if (sink == null) {
@@ -176,7 +177,8 @@ public class McpServerSession implements McpSession {
 				}
 				return Mono.empty();
 			}
-			else if (message instanceof JSONRPCRequest request) {
+			else if (message instanceof JSONRPCRequest) {
+				JSONRPCRequest request = (JSONRPCRequest) message;
 				logger.debug("Received request: {}", request);
 				return handleIncomingRequest(request).onErrorResume(error -> {
 					var errorResponse = new JSONRPCResponse(McpSchema.JSONRPC_VERSION, request.getId(), null,
@@ -185,7 +187,8 @@ public class McpServerSession implements McpSession {
 					return this.transport.sendMessage(errorResponse).then(Mono.empty());
 				}).flatMap(this.transport::sendMessage);
 			}
-			else if (message instanceof JSONRPCNotification notification) {
+			else if (message instanceof JSONRPCNotification) {
+				JSONRPCNotification notification = (JSONRPCNotification) message;
 				// TODO handle errors for communication to without initialization
 				// happening first
 				logger.debug("Received notification: {}", notification);
@@ -268,7 +271,33 @@ public class McpServerSession implements McpSession {
 		});
 	}
 
-	record MethodNotFoundError(String method, String message, Object data) {
+	private static class MethodNotFoundError {
+
+		private final String method;
+
+		private final String message;
+
+		private final Object data;
+
+		MethodNotFoundError(String method, String message, Object data) {
+			this.method = method;
+			this.message = message;
+			this.data = data;
+		}
+
+		@SuppressWarnings("unused")
+		public String method() {
+			return method;
+		}
+
+		public String message() {
+			return message;
+		}
+
+		public Object data() {
+			return data;
+		}
+
 	}
 
 	private MethodNotFoundError getMethodNotFoundError(String method) {

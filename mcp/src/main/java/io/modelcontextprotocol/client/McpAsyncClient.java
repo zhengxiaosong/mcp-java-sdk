@@ -499,7 +499,7 @@ public class McpAsyncClient {
 			PaginatedRequest request = transport.unmarshalFrom(params, new TypeReference<PaginatedRequest>() {
 			});
 
-			List<Root> roots = this.roots.values().stream().toList();
+			List<Root> roots = new ArrayList<>(this.roots.values());
 
 			return Mono.just(new ListRootsResult(roots));
 		};

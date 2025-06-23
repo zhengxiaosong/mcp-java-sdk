@@ -522,11 +522,8 @@ class WebMvcSseIntegrationTests {
 	// Tools Tests
 	// ---------------------------------------
 
-	String emptyJsonSchema = "{\n" +
-			"\t\"$schema\": \"http://json-schema.org/draft-07/schema#\",\n" +
-			"\t\"type\": \"object\",\n" +
-			"\t\"properties\": {}\n" +
-			"}";
+	String emptyJsonSchema = "{\n" + "\t\"$schema\": \"http://json-schema.org/draft-07/schema#\",\n"
+			+ "\t\"type\": \"object\",\n" + "\t\"properties\": {}\n" + "}";
 
 	@Test
 	void testToolCallSuccess() {

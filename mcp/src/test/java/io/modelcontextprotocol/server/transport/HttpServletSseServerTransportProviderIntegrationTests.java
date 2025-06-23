@@ -497,11 +497,8 @@ class HttpServletSseServerTransportProviderIntegrationTests {
 	// Tools Tests
 	// ---------------------------------------
 
-	String emptyJsonSchema = "{\n" +
-			"	\"$schema\": \"http://json-schema.org/draft-07/schema#\",\n" +
-			"	\"type\": \"object\",\n" +
-			"	\"properties\": {}\n" +
-			"}";
+	String emptyJsonSchema = "{\n" + "	\"$schema\": \"http://json-schema.org/draft-07/schema#\",\n"
+			+ "	\"type\": \"object\",\n" + "	\"properties\": {}\n" + "}";
 
 	@Test
 	void testToolCallSuccess() {

@@ -19,7 +19,9 @@ public class TomcatTestUtil {
 	}
 
 	public static class TomcatServer {
+
 		private final Tomcat tomcat;
+
 		private final AnnotationConfigWebApplicationContext appContext;
 
 		public TomcatServer(Tomcat tomcat, AnnotationConfigWebApplicationContext appContext) {
@@ -34,6 +36,7 @@ public class TomcatTestUtil {
 		public AnnotationConfigWebApplicationContext appContext() {
 			return appContext;
 		}
+
 	}
 
 	public static TomcatServer createTomcatServer(String contextPath, int port, Class<?> componentClass) {

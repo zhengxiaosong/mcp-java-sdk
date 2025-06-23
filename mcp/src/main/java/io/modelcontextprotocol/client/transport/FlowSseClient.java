@@ -66,7 +66,32 @@ public class FlowSseClient {
 	 * @param type the event type (defaults to "message" if not specified in the stream)
 	 * @param data the event payload data
 	 */
-	public static record SseEvent(String id, String type, String data) {
+	public static class SseEvent {
+
+		private final String id;
+
+		private final String type;
+
+		private final String data;
+
+		public SseEvent(String id, String type, String data) {
+			this.id = id;
+			this.type = type;
+			this.data = data;
+		}
+
+		public String id() {
+			return id;
+		}
+
+		public String type() {
+			return type;
+		}
+
+		public String data() {
+			return data;
+		}
+
 	}
 
 	/**

@@ -69,12 +69,23 @@ class McpClientFeatures {
 	 * @param loggingConsumers the logging consumers.
 	 * @param samplingHandler the sampling handler.
 	 */
-	record Async(Implementation clientInfo, ClientCapabilities clientCapabilities, Map<String, Root> roots,
-			List<Function<List<Tool>, Mono<Void>>> toolsChangeConsumers,
-			List<Function<List<Resource>, Mono<Void>>> resourcesChangeConsumers,
-			List<Function<List<Prompt>, Mono<Void>>> promptsChangeConsumers,
-			List<Function<LoggingMessageNotification, Mono<Void>>> loggingConsumers,
-			Function<CreateMessageRequest, Mono<CreateMessageResult>> samplingHandler) {
+	public static class Async {
+
+		private final Implementation clientInfo;
+
+		private final ClientCapabilities clientCapabilities;
+
+		private final Map<String, Root> roots;
+
+		private final List<Function<List<Tool>, Mono<Void>>> toolsChangeConsumers;
+
+		private final List<Function<List<Resource>, Mono<Void>>> resourcesChangeConsumers;
+
+		private final List<Function<List<Prompt>, Mono<Void>>> promptsChangeConsumers;
+
+		private final List<Function<LoggingMessageNotification, Mono<Void>>> loggingConsumers;
+
+		private final Function<CreateMessageRequest, Mono<CreateMessageResult>> samplingHandler;
 
 		/**
 		 * Create an instance and validate the arguments.
@@ -106,6 +117,38 @@ class McpClientFeatures {
 			this.promptsChangeConsumers = promptsChangeConsumers != null ? promptsChangeConsumers : List.of();
 			this.loggingConsumers = loggingConsumers != null ? loggingConsumers : List.of();
 			this.samplingHandler = samplingHandler;
+		}
+
+		public Implementation clientInfo() {
+			return this.clientInfo;
+		}
+
+		public ClientCapabilities clientCapabilities() {
+			return this.clientCapabilities;
+		}
+
+		public Map<String, Root> roots() {
+			return this.roots;
+		}
+
+		public List<Function<List<Tool>, Mono<Void>>> toolsChangeConsumers() {
+			return this.toolsChangeConsumers;
+		}
+
+		public List<Function<List<Resource>, Mono<Void>>> resourcesChangeConsumers() {
+			return this.resourcesChangeConsumers;
+		}
+
+		public List<Function<List<Prompt>, Mono<Void>>> promptsChangeConsumers() {
+			return this.promptsChangeConsumers;
+		}
+
+		public List<Function<LoggingMessageNotification, Mono<Void>>> loggingConsumers() {
+			return this.loggingConsumers;
+		}
+
+		public Function<CreateMessageRequest, Mono<CreateMessageResult>> samplingHandler() {
+			return this.samplingHandler;
 		}
 
 		/**
@@ -149,6 +192,7 @@ class McpClientFeatures {
 					toolsChangeConsumers, resourcesChangeConsumers, promptsChangeConsumers, loggingConsumers,
 					samplingHandler);
 		}
+
 	}
 
 	/**
@@ -164,11 +208,23 @@ class McpClientFeatures {
 	 * @param loggingConsumers the logging consumers.
 	 * @param samplingHandler the sampling handler.
 	 */
-	public record Sync(Implementation clientInfo, ClientCapabilities clientCapabilities, Map<String, Root> roots,
-			List<Consumer<List<Tool>>> toolsChangeConsumers, List<Consumer<List<Resource>>> resourcesChangeConsumers,
-			List<Consumer<List<Prompt>>> promptsChangeConsumers,
-			List<Consumer<LoggingMessageNotification>> loggingConsumers,
-			Function<CreateMessageRequest, CreateMessageResult> samplingHandler) {
+	public static class Sync {
+
+		private final Implementation clientInfo;
+
+		private final ClientCapabilities clientCapabilities;
+
+		private final Map<String, Root> roots;
+
+		private final List<Consumer<List<Tool>>> toolsChangeConsumers;
+
+		private final List<Consumer<List<Resource>>> resourcesChangeConsumers;
+
+		private final List<Consumer<List<Prompt>>> promptsChangeConsumers;
+
+		private final List<Consumer<LoggingMessageNotification>> loggingConsumers;
+
+		private final Function<CreateMessageRequest, CreateMessageResult> samplingHandler;
 
 		/**
 		 * Create an instance and validate the arguments.
@@ -202,6 +258,39 @@ class McpClientFeatures {
 			this.loggingConsumers = loggingConsumers != null ? loggingConsumers : List.of();
 			this.samplingHandler = samplingHandler;
 		}
+
+		public Implementation clientInfo() {
+			return this.clientInfo;
+		}
+
+		public ClientCapabilities clientCapabilities() {
+			return this.clientCapabilities;
+		}
+
+		public Map<String, Root> roots() {
+			return this.roots;
+		}
+
+		public List<Consumer<List<Tool>>> toolsChangeConsumers() {
+			return this.toolsChangeConsumers;
+		}
+
+		public List<Consumer<List<Resource>>> resourcesChangeConsumers() {
+			return this.resourcesChangeConsumers;
+		}
+
+		public List<Consumer<List<Prompt>>> promptsChangeConsumers() {
+			return this.promptsChangeConsumers;
+		}
+
+		public List<Consumer<LoggingMessageNotification>> loggingConsumers() {
+			return this.loggingConsumers;
+		}
+
+		public Function<CreateMessageRequest, CreateMessageResult> samplingHandler() {
+			return this.samplingHandler;
+		}
+
 	}
 
 }
