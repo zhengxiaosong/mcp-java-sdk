@@ -24,8 +24,6 @@ import io.modelcontextprotocol.server.TestUtil;
 import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.server.transport.WebFluxSseServerTransportProvider;
 import io.modelcontextprotocol.spec.McpError;
-import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.*;
 import io.modelcontextprotocol.spec.autocomplete.CompleteRequest;
 import io.modelcontextprotocol.spec.autocomplete.CompleteRequestCompleteArgument;
 import io.modelcontextprotocol.spec.autocomplete.CompleteResult;
@@ -124,8 +122,7 @@ class WebFluxSseIntegrationTests {
 		var clientBuilder = clientBuilders.get(clientType);
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new Tool("tool1", "tool1 description", emptyJsonSchema),
-				(exchange, request) -> exchange.createMessage(mock(CreateMessageRequest.class))
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> exchange.createMessage(mock(CreateMessageRequest.class))
 					.thenReturn(mock(CallToolResult.class)));
 
 		var server = McpServer.async(mcpServerTransportProvider).serverInfo("test-server", "1.0.0").tools(tool).build();
@@ -524,13 +521,11 @@ class WebFluxSseIntegrationTests {
 	// Tools Tests
 	// ---------------------------------------
 
-	String emptyJsonSchema = """
-			{
-			"$schema": "http://json-schema.org/draft-07/schema#",
-			"type": "object",
-			"properties": {}
-			}
-			""";
+	String emptyJsonSchema = "{\n" +
+			"\t\"$schema\": \"http://json-schema.org/draft-07/schema#\",\n" +
+			"\t\"type\": \"object\",\n" +
+			"\t\"properties\": {}\n" +
+			"}";
 
 	@ParameterizedTest(name = "{0} : {displayName} ")
 	@ValueSource(strings = { "httpclient", "webflux" })
