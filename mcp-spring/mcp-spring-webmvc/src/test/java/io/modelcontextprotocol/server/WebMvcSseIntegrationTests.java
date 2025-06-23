@@ -15,17 +15,20 @@ import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.server.transport.WebMvcSseServerTransportProvider;
 import io.modelcontextprotocol.spec.McpError;
-import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
-import io.modelcontextprotocol.spec.McpSchema.ClientCapabilities;
-import io.modelcontextprotocol.spec.McpSchema.CreateMessageRequest;
-import io.modelcontextprotocol.spec.McpSchema.CreateMessageResult;
-import io.modelcontextprotocol.spec.McpSchema.InitializeResult;
-import io.modelcontextprotocol.spec.McpSchema.ModelPreferences;
-import io.modelcontextprotocol.spec.McpSchema.Role;
-import io.modelcontextprotocol.spec.McpSchema.Root;
-import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities;
-import io.modelcontextprotocol.spec.McpSchema.Tool;
+import io.modelcontextprotocol.spec.common.Role;
+import io.modelcontextprotocol.spec.common.Root;
+import io.modelcontextprotocol.spec.content.TextContent;
+import io.modelcontextprotocol.spec.initialization.ClientCapabilities;
+import io.modelcontextprotocol.spec.initialization.Implementation;
+import io.modelcontextprotocol.spec.initialization.InitializeResult;
+import io.modelcontextprotocol.spec.initialization.ServerCapabilities;
+import io.modelcontextprotocol.spec.sampling.CreateMessageRequest;
+import io.modelcontextprotocol.spec.sampling.CreateMessageResult;
+import io.modelcontextprotocol.spec.sampling.ModelPreferences;
+import io.modelcontextprotocol.spec.sampling.SamplingMessage;
+import io.modelcontextprotocol.spec.tool.CallToolRequest;
+import io.modelcontextprotocol.spec.tool.CallToolResult;
+import io.modelcontextprotocol.spec.tool.Tool;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.LifecycleState;
 import org.junit.jupiter.api.AfterEach;
@@ -123,9 +126,9 @@ class WebMvcSseIntegrationTests {
 	void testCreateMessageWithoutSamplingCapabilities() {
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
-					exchange.createMessage(mock(McpSchema.CreateMessageRequest.class)).block();
+					exchange.createMessage(mock(CreateMessageRequest.class)).block();
 
 					return Mono.just(mock(CallToolResult.class));
 				});
@@ -139,13 +142,13 @@ class WebMvcSseIntegrationTests {
 		try (
 			// Create client without sampling capabilities
 			var client = clientBuilder
-				.clientInfo(new McpSchema.Implementation("Sample " + "client", "0.0.0"))
+				.clientInfo(new Implementation("Sample " + "client", "0.0.0"))
 				.build()) {//@formatter:on
 
 			assertThat(client.initialize()).isNotNull();
 
 			try {
-				client.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+				client.callTool(new CallToolRequest("tool1", Map.of()));
 			}
 			catch (McpError e) {
 				assertThat(e).isInstanceOf(McpError.class)
@@ -159,22 +162,20 @@ class WebMvcSseIntegrationTests {
 	void testCreateMessageSuccess() {
 
 		Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
-			assertThat(request.messages()).hasSize(1);
-			assertThat(request.messages().get(0).content()).isInstanceOf(McpSchema.TextContent.class);
+			assertThat(request.getMessages()).hasSize(1);
+			assertThat(request.getMessages().get(0).getContent()).isInstanceOf(TextContent.class);
 
-			return new CreateMessageResult(Role.USER, new McpSchema.TextContent("Test message"), "MockModelName",
+			return new CreateMessageResult(Role.USER, new TextContent("Test message"), "MockModelName",
 					CreateMessageResult.StopReason.STOP_SEQUENCE);
 		};
 
-		CallToolResult callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")),
-				null);
+		CallToolResult callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
-					var createMessageRequest = McpSchema.CreateMessageRequest.builder()
-						.messages(List.of(new McpSchema.SamplingMessage(McpSchema.Role.USER,
-								new McpSchema.TextContent("Test message"))))
+					var createMessageRequest = CreateMessageRequest.builder()
+						.messages(List.of(new SamplingMessage(Role.USER, new TextContent("Test message"))))
 						.modelPreferences(ModelPreferences.builder()
 							.hints(List.of())
 							.costPriority(1.0)
@@ -185,11 +186,11 @@ class WebMvcSseIntegrationTests {
 
 					StepVerifier.create(exchange.createMessage(createMessageRequest)).consumeNextWith(result -> {
 						assertThat(result).isNotNull();
-						assertThat(result.role()).isEqualTo(Role.USER);
-						assertThat(result.content()).isInstanceOf(McpSchema.TextContent.class);
-						assertThat(((McpSchema.TextContent) result.content()).text()).isEqualTo("Test message");
-						assertThat(result.model()).isEqualTo("MockModelName");
-						assertThat(result.stopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
+						assertThat(result.getRole()).isEqualTo(Role.USER);
+						assertThat(result.getContent()).isInstanceOf(TextContent.class);
+						assertThat(((TextContent) result.getContent()).getText()).isEqualTo("Test message");
+						assertThat(result.getModel()).isEqualTo("MockModelName");
+						assertThat(result.getStopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
 					}).verifyComplete();
 
 					return Mono.just(callResponse);
@@ -202,7 +203,7 @@ class WebMvcSseIntegrationTests {
 				.build();
 
 		try (
-			var mcpClient = clientBuilder.clientInfo(new McpSchema.Implementation("Sample client", "0.0.0"))
+			var mcpClient = clientBuilder.clientInfo(new Implementation("Sample client", "0.0.0"))
 				.capabilities(ClientCapabilities.builder().sampling().build())
 				.sampling(samplingHandler)
 				.build()) {//@formatter:on
@@ -210,7 +211,7 @@ class WebMvcSseIntegrationTests {
 			InitializeResult initResult = mcpClient.initialize();
 			assertThat(initResult).isNotNull();
 
-			CallToolResult response = mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+			CallToolResult response = mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 
 			assertThat(response).isNotNull().isEqualTo(callResponse);
 		}
@@ -223,34 +224,32 @@ class WebMvcSseIntegrationTests {
 		// Client
 
 		Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
-			assertThat(request.messages()).hasSize(1);
-			assertThat(request.messages().get(0).content()).isInstanceOf(McpSchema.TextContent.class);
+			assertThat(request.getMessages()).hasSize(1);
+			assertThat(request.getMessages().get(0).getContent()).isInstanceOf(TextContent.class);
 			try {
 				TimeUnit.SECONDS.sleep(2);
 			}
 			catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
-			return new CreateMessageResult(Role.USER, new McpSchema.TextContent("Test message"), "MockModelName",
+			return new CreateMessageResult(Role.USER, new TextContent("Test message"), "MockModelName",
 					CreateMessageResult.StopReason.STOP_SEQUENCE);
 		};
 
-		var mcpClient = clientBuilder.clientInfo(new McpSchema.Implementation("Sample client", "0.0.0"))
+		var mcpClient = clientBuilder.clientInfo(new Implementation("Sample client", "0.0.0"))
 			.capabilities(ClientCapabilities.builder().sampling().build())
 			.sampling(samplingHandler)
 			.build();
 
 		// Server
 
-		CallToolResult callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")),
-				null);
+		CallToolResult callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
-					var craeteMessageRequest = McpSchema.CreateMessageRequest.builder()
-						.messages(List.of(new McpSchema.SamplingMessage(McpSchema.Role.USER,
-								new McpSchema.TextContent("Test message"))))
+					var craeteMessageRequest = CreateMessageRequest.builder()
+						.messages(List.of(new SamplingMessage(Role.USER, new TextContent("Test message"))))
 						.modelPreferences(ModelPreferences.builder()
 							.hints(List.of())
 							.costPriority(1.0)
@@ -261,11 +260,11 @@ class WebMvcSseIntegrationTests {
 
 					StepVerifier.create(exchange.createMessage(craeteMessageRequest)).consumeNextWith(result -> {
 						assertThat(result).isNotNull();
-						assertThat(result.role()).isEqualTo(Role.USER);
-						assertThat(result.content()).isInstanceOf(McpSchema.TextContent.class);
-						assertThat(((McpSchema.TextContent) result.content()).text()).isEqualTo("Test message");
-						assertThat(result.model()).isEqualTo("MockModelName");
-						assertThat(result.stopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
+						assertThat(result.getRole()).isEqualTo(Role.USER);
+						assertThat(result.getContent()).isInstanceOf(TextContent.class);
+						assertThat(((TextContent) result.getContent()).getText()).isEqualTo("Test message");
+						assertThat(result.getModel()).isEqualTo("MockModelName");
+						assertThat(result.getStopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
 					}).verifyComplete();
 
 					return Mono.just(callResponse);
@@ -280,7 +279,7 @@ class WebMvcSseIntegrationTests {
 		InitializeResult initResult = mcpClient.initialize();
 		assertThat(initResult).isNotNull();
 
-		CallToolResult response = mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+		CallToolResult response = mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 
 		assertThat(response).isNotNull();
 		assertThat(response).isEqualTo(callResponse);
@@ -295,34 +294,32 @@ class WebMvcSseIntegrationTests {
 		// Client
 
 		Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
-			assertThat(request.messages()).hasSize(1);
-			assertThat(request.messages().get(0).content()).isInstanceOf(McpSchema.TextContent.class);
+			assertThat(request.getMessages()).hasSize(1);
+			assertThat(request.getMessages().get(0).getContent()).isInstanceOf(TextContent.class);
 			try {
 				TimeUnit.SECONDS.sleep(2);
 			}
 			catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
-			return new CreateMessageResult(Role.USER, new McpSchema.TextContent("Test message"), "MockModelName",
+			return new CreateMessageResult(Role.USER, new TextContent("Test message"), "MockModelName",
 					CreateMessageResult.StopReason.STOP_SEQUENCE);
 		};
 
-		var mcpClient = clientBuilder.clientInfo(new McpSchema.Implementation("Sample client", "0.0.0"))
+		var mcpClient = clientBuilder.clientInfo(new Implementation("Sample client", "0.0.0"))
 			.capabilities(ClientCapabilities.builder().sampling().build())
 			.sampling(samplingHandler)
 			.build();
 
 		// Server
 
-		CallToolResult callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")),
-				null);
+		CallToolResult callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
-					var craeteMessageRequest = McpSchema.CreateMessageRequest.builder()
-						.messages(List.of(new McpSchema.SamplingMessage(McpSchema.Role.USER,
-								new McpSchema.TextContent("Test message"))))
+					var craeteMessageRequest = CreateMessageRequest.builder()
+						.messages(List.of(new SamplingMessage(Role.USER, new TextContent("Test message"))))
 						.modelPreferences(ModelPreferences.builder()
 							.hints(List.of())
 							.costPriority(1.0)
@@ -333,11 +330,11 @@ class WebMvcSseIntegrationTests {
 
 					StepVerifier.create(exchange.createMessage(craeteMessageRequest)).consumeNextWith(result -> {
 						assertThat(result).isNotNull();
-						assertThat(result.role()).isEqualTo(Role.USER);
-						assertThat(result.content()).isInstanceOf(McpSchema.TextContent.class);
-						assertThat(((McpSchema.TextContent) result.content()).text()).isEqualTo("Test message");
-						assertThat(result.model()).isEqualTo("MockModelName");
-						assertThat(result.stopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
+						assertThat(result.getRole()).isEqualTo(Role.USER);
+						assertThat(result.getContent()).isInstanceOf(TextContent.class);
+						assertThat(((TextContent) result.getContent()).getText()).isEqualTo("Test message");
+						assertThat(result.getModel()).isEqualTo("MockModelName");
+						assertThat(result.getStopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
 					}).verifyComplete();
 
 					return Mono.just(callResponse);
@@ -353,7 +350,7 @@ class WebMvcSseIntegrationTests {
 		assertThat(initResult).isNotNull();
 
 		assertThatExceptionOfType(McpError.class).isThrownBy(() -> {
-			mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+			mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 		}).withMessageContaining("Timeout");
 
 		mcpClient.close();
@@ -389,7 +386,7 @@ class WebMvcSseIntegrationTests {
 			});
 
 			// Remove a root
-			mcpClient.removeRoot(roots.get(0).uri());
+			mcpClient.removeRoot(roots.get(0).getUri());
 
 			await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
 				assertThat(rootsRef.get()).containsAll(List.of(roots.get(1)));
@@ -411,7 +408,7 @@ class WebMvcSseIntegrationTests {
 	void testRootsWithoutCapability() {
 
 		McpServerFeatures.SyncToolSpecification tool = new McpServerFeatures.SyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
 					exchange.listRoots(); // try to list roots
 
@@ -430,7 +427,7 @@ class WebMvcSseIntegrationTests {
 
 			// Attempt to list roots should fail
 			try {
-				mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+				mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 			}
 			catch (McpError e) {
 				assertThat(e).isInstanceOf(McpError.class).hasMessage("Roots not supported");
@@ -536,9 +533,9 @@ class WebMvcSseIntegrationTests {
 	@Test
 	void testToolCallSuccess() {
 
-		var callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")), null);
+		var callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
 					String response = restTemplate.getForObject(
 							"https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md",
@@ -557,9 +554,9 @@ class WebMvcSseIntegrationTests {
 			InitializeResult initResult = mcpClient.initialize();
 			assertThat(initResult).isNotNull();
 
-			assertThat(mcpClient.listTools().tools()).contains(tool1.tool());
+			assertThat(mcpClient.listTools().getTools()).contains(tool1.getTool());
 
-			CallToolResult response = mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+			CallToolResult response = mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 
 			assertThat(response).isNotNull().isEqualTo(callResponse);
 		}
@@ -570,9 +567,9 @@ class WebMvcSseIntegrationTests {
 	@Test
 	void testToolListChangeHandlingSuccess() {
 
-		var callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")), null);
+		var callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
 					String response = restTemplate.getForObject(
 							"https://raw.githubusercontent.com/modelcontextprotocol/java-sdk/refs/heads/main/README.md",
@@ -602,12 +599,12 @@ class WebMvcSseIntegrationTests {
 
 			assertThat(rootsRef.get()).isNull();
 
-			assertThat(mcpClient.listTools().tools()).contains(tool1.tool());
+			assertThat(mcpClient.listTools().getTools()).contains(tool1.getTool());
 
 			mcpServer.notifyToolsListChanged();
 
 			await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-				assertThat(rootsRef.get()).containsAll(List.of(tool1.tool()));
+				assertThat(rootsRef.get()).containsAll(List.of(tool1.getTool()));
 			});
 
 			// Remove a tool
@@ -619,13 +616,12 @@ class WebMvcSseIntegrationTests {
 
 			// Add a new tool
 			McpServerFeatures.SyncToolSpecification tool2 = new McpServerFeatures.SyncToolSpecification(
-					new McpSchema.Tool("tool2", "tool2 description", emptyJsonSchema),
-					(exchange, request) -> callResponse);
+					new Tool("tool2", "tool2 description", emptyJsonSchema), (exchange, request) -> callResponse);
 
 			mcpServer.addTool(tool2);
 
 			await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-				assertThat(rootsRef.get()).containsAll(List.of(tool2.tool()));
+				assertThat(rootsRef.get()).containsAll(List.of(tool2.getTool()));
 			});
 		}
 

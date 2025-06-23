@@ -26,6 +26,30 @@ import io.modelcontextprotocol.server.transport.WebFluxSseServerTransportProvide
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.*;
+import io.modelcontextprotocol.spec.autocomplete.CompleteRequest;
+import io.modelcontextprotocol.spec.autocomplete.CompleteRequestCompleteArgument;
+import io.modelcontextprotocol.spec.autocomplete.CompleteResult;
+import io.modelcontextprotocol.spec.autocomplete.CompleteResultCompleteCompletion;
+import io.modelcontextprotocol.spec.autocomplete.PromptReference;
+import io.modelcontextprotocol.spec.common.Role;
+import io.modelcontextprotocol.spec.common.Root;
+import io.modelcontextprotocol.spec.content.TextContent;
+import io.modelcontextprotocol.spec.initialization.ClientCapabilities;
+import io.modelcontextprotocol.spec.initialization.Implementation;
+import io.modelcontextprotocol.spec.initialization.InitializeResult;
+import io.modelcontextprotocol.spec.initialization.ServerCapabilities;
+import io.modelcontextprotocol.spec.logging.LoggingLevel;
+import io.modelcontextprotocol.spec.logging.LoggingMessageNotification;
+import io.modelcontextprotocol.spec.prompt.Prompt;
+import io.modelcontextprotocol.spec.prompt.PromptArgument;
+import io.modelcontextprotocol.spec.sampling.CreateMessageRequest;
+import io.modelcontextprotocol.spec.sampling.CreateMessageResult;
+import io.modelcontextprotocol.spec.sampling.ModelPreferences;
+import io.modelcontextprotocol.spec.sampling.SamplingMessage;
+import io.modelcontextprotocol.spec.tool.CallToolRequest;
+import io.modelcontextprotocol.spec.tool.CallToolResult;
+import io.modelcontextprotocol.spec.tool.Tool;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -100,19 +124,18 @@ class WebFluxSseIntegrationTests {
 		var clientBuilder = clientBuilders.get(clientType);
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema),
+				new Tool("tool1", "tool1 description", emptyJsonSchema),
 				(exchange, request) -> exchange.createMessage(mock(CreateMessageRequest.class))
 					.thenReturn(mock(CallToolResult.class)));
 
 		var server = McpServer.async(mcpServerTransportProvider).serverInfo("test-server", "1.0.0").tools(tool).build();
 
-		try (var client = clientBuilder.clientInfo(new McpSchema.Implementation("Sample " + "client", "0.0.0"))
-			.build();) {
+		try (var client = clientBuilder.clientInfo(new Implementation("Sample " + "client", "0.0.0")).build();) {
 
 			assertThat(client.initialize()).isNotNull();
 
 			try {
-				client.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+				client.callTool(new CallToolRequest("tool1", Map.of()));
 			}
 			catch (McpError e) {
 				assertThat(e).isInstanceOf(McpError.class)
@@ -129,24 +152,22 @@ class WebFluxSseIntegrationTests {
 		var clientBuilder = clientBuilders.get(clientType);
 
 		Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
-			assertThat(request.messages()).hasSize(1);
-			assertThat(request.messages().get(0).content()).isInstanceOf(McpSchema.TextContent.class);
+			assertThat(request.getMessages()).hasSize(1);
+			assertThat(request.getMessages().get(0).getContent()).isInstanceOf(TextContent.class);
 
-			return new CreateMessageResult(Role.USER, new McpSchema.TextContent("Test message"), "MockModelName",
+			return new CreateMessageResult(Role.USER, new TextContent("Test message"), "MockModelName",
 					CreateMessageResult.StopReason.STOP_SEQUENCE);
 		};
 
-		CallToolResult callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")),
-				null);
+		CallToolResult callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 
 		AtomicReference<CreateMessageResult> samplingResult = new AtomicReference<>();
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
-					var createMessageRequest = McpSchema.CreateMessageRequest.builder()
-						.messages(List.of(new McpSchema.SamplingMessage(McpSchema.Role.USER,
-								new McpSchema.TextContent("Test message"))))
+					var createMessageRequest = CreateMessageRequest.builder()
+						.messages(List.of(new SamplingMessage(Role.USER, new TextContent("Test message"))))
 						.modelPreferences(ModelPreferences.builder()
 							.hints(List.of())
 							.costPriority(1.0)
@@ -165,7 +186,7 @@ class WebFluxSseIntegrationTests {
 			.tools(tool)
 			.build();
 
-		try (var mcpClient = clientBuilder.clientInfo(new McpSchema.Implementation("Sample client", "0.0.0"))
+		try (var mcpClient = clientBuilder.clientInfo(new Implementation("Sample client", "0.0.0"))
 			.capabilities(ClientCapabilities.builder().sampling().build())
 			.sampling(samplingHandler)
 			.build()) {
@@ -173,18 +194,18 @@ class WebFluxSseIntegrationTests {
 			InitializeResult initResult = mcpClient.initialize();
 			assertThat(initResult).isNotNull();
 
-			CallToolResult response = mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+			CallToolResult response = mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 
 			assertThat(response).isNotNull();
 			assertThat(response).isEqualTo(callResponse);
 
 			assertWith(samplingResult.get(), result -> {
 				assertThat(result).isNotNull();
-				assertThat(result.role()).isEqualTo(Role.USER);
-				assertThat(result.content()).isInstanceOf(McpSchema.TextContent.class);
-				assertThat(((McpSchema.TextContent) result.content()).text()).isEqualTo("Test message");
-				assertThat(result.model()).isEqualTo("MockModelName");
-				assertThat(result.stopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
+				assertThat(result.getRole()).isEqualTo(Role.USER);
+				assertThat(result.getContent()).isInstanceOf(TextContent.class);
+				assertThat(((TextContent) result.getContent()).getText()).isEqualTo("Test message");
+				assertThat(result.getModel()).isEqualTo("MockModelName");
+				assertThat(result.getStopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
 			});
 		}
 		mcpServer.closeGracefully().block();
@@ -198,31 +219,29 @@ class WebFluxSseIntegrationTests {
 		var clientBuilder = clientBuilders.get(clientType);
 
 		Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
-			assertThat(request.messages()).hasSize(1);
-			assertThat(request.messages().get(0).content()).isInstanceOf(McpSchema.TextContent.class);
+			assertThat(request.getMessages()).hasSize(1);
+			assertThat(request.getMessages().get(0).getContent()).isInstanceOf(TextContent.class);
 			try {
 				TimeUnit.SECONDS.sleep(2);
 			}
 			catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
-			return new CreateMessageResult(Role.USER, new McpSchema.TextContent("Test message"), "MockModelName",
+			return new CreateMessageResult(Role.USER, new TextContent("Test message"), "MockModelName",
 					CreateMessageResult.StopReason.STOP_SEQUENCE);
 		};
 
 		// Server
 
-		CallToolResult callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")),
-				null);
+		CallToolResult callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 
 		AtomicReference<CreateMessageResult> samplingResult = new AtomicReference<>();
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
-					var craeteMessageRequest = McpSchema.CreateMessageRequest.builder()
-						.messages(List.of(new McpSchema.SamplingMessage(McpSchema.Role.USER,
-								new McpSchema.TextContent("Test message"))))
+					var craeteMessageRequest = CreateMessageRequest.builder()
+						.messages(List.of(new SamplingMessage(Role.USER, new TextContent("Test message"))))
 						.modelPreferences(ModelPreferences.builder()
 							.hints(List.of())
 							.costPriority(1.0)
@@ -242,7 +261,7 @@ class WebFluxSseIntegrationTests {
 			.tools(tool)
 			.build();
 
-		try (var mcpClient = clientBuilder.clientInfo(new McpSchema.Implementation("Sample client", "0.0.0"))
+		try (var mcpClient = clientBuilder.clientInfo(new Implementation("Sample client", "0.0.0"))
 			.capabilities(ClientCapabilities.builder().sampling().build())
 			.sampling(samplingHandler)
 			.build()) {
@@ -250,18 +269,18 @@ class WebFluxSseIntegrationTests {
 			InitializeResult initResult = mcpClient.initialize();
 			assertThat(initResult).isNotNull();
 
-			CallToolResult response = mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+			CallToolResult response = mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 
 			assertThat(response).isNotNull();
 			assertThat(response).isEqualTo(callResponse);
 
 			assertWith(samplingResult.get(), result -> {
 				assertThat(result).isNotNull();
-				assertThat(result.role()).isEqualTo(Role.USER);
-				assertThat(result.content()).isInstanceOf(McpSchema.TextContent.class);
-				assertThat(((McpSchema.TextContent) result.content()).text()).isEqualTo("Test message");
-				assertThat(result.model()).isEqualTo("MockModelName");
-				assertThat(result.stopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
+				assertThat(result.getRole()).isEqualTo(Role.USER);
+				assertThat(result.getContent()).isInstanceOf(TextContent.class);
+				assertThat(((TextContent) result.getContent()).getText()).isEqualTo("Test message");
+				assertThat(result.getModel()).isEqualTo("MockModelName");
+				assertThat(result.getStopReason()).isEqualTo(CreateMessageResult.StopReason.STOP_SEQUENCE);
 			});
 		}
 
@@ -276,29 +295,27 @@ class WebFluxSseIntegrationTests {
 		var clientBuilder = clientBuilders.get(clientType);
 
 		Function<CreateMessageRequest, CreateMessageResult> samplingHandler = request -> {
-			assertThat(request.messages()).hasSize(1);
-			assertThat(request.messages().get(0).content()).isInstanceOf(McpSchema.TextContent.class);
+			assertThat(request.getMessages()).hasSize(1);
+			assertThat(request.getMessages().get(0).getContent()).isInstanceOf(TextContent.class);
 			try {
 				TimeUnit.SECONDS.sleep(2);
 			}
 			catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
-			return new CreateMessageResult(Role.USER, new McpSchema.TextContent("Test message"), "MockModelName",
+			return new CreateMessageResult(Role.USER, new TextContent("Test message"), "MockModelName",
 					CreateMessageResult.StopReason.STOP_SEQUENCE);
 		};
 
 		// Server
 
-		CallToolResult callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")),
-				null);
+		CallToolResult callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
-					var craeteMessageRequest = McpSchema.CreateMessageRequest.builder()
-						.messages(List.of(new McpSchema.SamplingMessage(McpSchema.Role.USER,
-								new McpSchema.TextContent("Test message"))))
+					var craeteMessageRequest = CreateMessageRequest.builder()
+						.messages(List.of(new SamplingMessage(Role.USER, new TextContent("Test message"))))
 						.build();
 
 					return exchange.createMessage(craeteMessageRequest).thenReturn(callResponse);
@@ -310,7 +327,7 @@ class WebFluxSseIntegrationTests {
 			.tools(tool)
 			.build();
 
-		try (var mcpClient = clientBuilder.clientInfo(new McpSchema.Implementation("Sample client", "0.0.0"))
+		try (var mcpClient = clientBuilder.clientInfo(new Implementation("Sample client", "0.0.0"))
 			.capabilities(ClientCapabilities.builder().sampling().build())
 			.sampling(samplingHandler)
 			.build()) {
@@ -319,7 +336,7 @@ class WebFluxSseIntegrationTests {
 			assertThat(initResult).isNotNull();
 
 			assertThatExceptionOfType(McpError.class).isThrownBy(() -> {
-				mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+				mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 			}).withMessageContaining("within 1000ms");
 
 		}
@@ -359,7 +376,7 @@ class WebFluxSseIntegrationTests {
 			});
 
 			// Remove a root
-			mcpClient.removeRoot(roots.get(0).uri());
+			mcpClient.removeRoot(roots.get(0).getUri());
 
 			await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
 				assertThat(rootsRef.get()).containsAll(List.of(roots.get(1)));
@@ -384,7 +401,7 @@ class WebFluxSseIntegrationTests {
 		var clientBuilder = clientBuilders.get(clientType);
 
 		McpServerFeatures.SyncToolSpecification tool = new McpServerFeatures.SyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 
 					exchange.listRoots(); // try to list roots
 
@@ -401,7 +418,7 @@ class WebFluxSseIntegrationTests {
 
 			// Attempt to list roots should fail
 			try {
-				mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+				mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 			}
 			catch (McpError e) {
 				assertThat(e).isInstanceOf(McpError.class).hasMessage("Roots not supported");
@@ -521,9 +538,9 @@ class WebFluxSseIntegrationTests {
 
 		var clientBuilder = clientBuilders.get(clientType);
 
-		var callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")), null);
+		var callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
 					String response = WebClient.create()
 						.get()
@@ -545,9 +562,9 @@ class WebFluxSseIntegrationTests {
 			InitializeResult initResult = mcpClient.initialize();
 			assertThat(initResult).isNotNull();
 
-			assertThat(mcpClient.listTools().tools()).contains(tool1.tool());
+			assertThat(mcpClient.listTools().getTools()).contains(tool1.getTool());
 
-			CallToolResult response = mcpClient.callTool(new McpSchema.CallToolRequest("tool1", Map.of()));
+			CallToolResult response = mcpClient.callTool(new CallToolRequest("tool1", Map.of()));
 
 			assertThat(response).isNotNull();
 			assertThat(response).isEqualTo(callResponse);
@@ -562,9 +579,9 @@ class WebFluxSseIntegrationTests {
 
 		var clientBuilder = clientBuilders.get(clientType);
 
-		var callResponse = new McpSchema.CallToolResult(List.of(new McpSchema.TextContent("CALL RESPONSE")), null);
+		var callResponse = new CallToolResult(List.of(new TextContent("CALL RESPONSE")), null);
 		McpServerFeatures.SyncToolSpecification tool1 = new McpServerFeatures.SyncToolSpecification(
-				new McpSchema.Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
+				new Tool("tool1", "tool1 description", emptyJsonSchema), (exchange, request) -> {
 					// perform a blocking call to a remote service
 					String response = WebClient.create()
 						.get()
@@ -576,7 +593,7 @@ class WebFluxSseIntegrationTests {
 					return callResponse;
 				});
 
-		AtomicReference<List<Tool>> rootsRef = new AtomicReference<>();
+		AtomicReference<List<Tool>> toolsRef = new AtomicReference<>();
 
 		var mcpServer = McpServer.sync(mcpServerTransportProvider)
 			.capabilities(ServerCapabilities.builder().tools(true).build())
@@ -592,38 +609,37 @@ class WebFluxSseIntegrationTests {
 				.bodyToMono(String.class)
 				.block();
 			assertThat(response).isNotBlank();
-			rootsRef.set(toolsUpdate);
+			toolsRef.set(toolsUpdate);
 		}).build()) {
 
 			InitializeResult initResult = mcpClient.initialize();
 			assertThat(initResult).isNotNull();
 
-			assertThat(rootsRef.get()).isNull();
+			assertThat(toolsRef.get()).isNull();
 
-			assertThat(mcpClient.listTools().tools()).contains(tool1.tool());
+			assertThat(mcpClient.listTools().getTools()).contains(tool1.getTool());
 
 			mcpServer.notifyToolsListChanged();
 
 			await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-				assertThat(rootsRef.get()).containsAll(List.of(tool1.tool()));
+				assertThat(toolsRef.get()).containsAll(List.of(tool1.getTool()));
 			});
 
 			// Remove a tool
 			mcpServer.removeTool("tool1");
 
 			await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-				assertThat(rootsRef.get()).isEmpty();
+				assertThat(toolsRef.get()).isEmpty();
 			});
 
 			// Add a new tool
 			McpServerFeatures.SyncToolSpecification tool2 = new McpServerFeatures.SyncToolSpecification(
-					new McpSchema.Tool("tool2", "tool2 description", emptyJsonSchema),
-					(exchange, request) -> callResponse);
+					new Tool("tool2", "tool2 description", emptyJsonSchema), (exchange, request) -> callResponse);
 
 			mcpServer.addTool(tool2);
 
 			await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-				assertThat(rootsRef.get()).containsAll(List.of(tool2.tool()));
+				assertThat(toolsRef.get()).containsAll(List.of(tool2.getTool()));
 			});
 		}
 
@@ -654,45 +670,44 @@ class WebFluxSseIntegrationTests {
 	@ValueSource(strings = { "httpclient", "webflux" })
 	void testLoggingNotification(String clientType) {
 		// Create a list to store received logging notifications
-		List<McpSchema.LoggingMessageNotification> receivedNotifications = new ArrayList<>();
+		List<LoggingMessageNotification> receivedNotifications = new ArrayList<>();
 
 		var clientBuilder = clientBuilders.get(clientType);
 
 		// Create server with a tool that sends logging notifications
 		McpServerFeatures.AsyncToolSpecification tool = new McpServerFeatures.AsyncToolSpecification(
-				new McpSchema.Tool("logging-test", "Test logging notifications", emptyJsonSchema),
-				(exchange, request) -> {
+				new Tool("logging-test", "Test logging notifications", emptyJsonSchema), (exchange, request) -> {
 
 					// Create and send notifications with different levels
 
 				//@formatter:off
 					return exchange // This should be filtered out (DEBUG < NOTICE)
-						.loggingNotification(McpSchema.LoggingMessageNotification.builder()
-								.level(McpSchema.LoggingLevel.DEBUG)
+						.loggingNotification(LoggingMessageNotification.builder()
+								.level(LoggingLevel.DEBUG)
 								.logger("test-logger")
 								.data("Debug message")
 								.build())
 					.then(exchange // This should be sent (NOTICE >= NOTICE)
-						.loggingNotification(McpSchema.LoggingMessageNotification.builder()
-								.level(McpSchema.LoggingLevel.NOTICE)
+						.loggingNotification(LoggingMessageNotification.builder()
+								.level(LoggingLevel.NOTICE)
 								.logger("test-logger")
 								.data("Notice message")
 								.build()))
 					.then(exchange // This should be sent (ERROR > NOTICE)
-						.loggingNotification(McpSchema.LoggingMessageNotification.builder()
-							.level(McpSchema.LoggingLevel.ERROR)
+						.loggingNotification(LoggingMessageNotification.builder()
+							.level(LoggingLevel.ERROR)
 							.logger("test-logger")
 							.data("Error message")
 							.build()))
 					.then(exchange // This should be filtered out (INFO < NOTICE)
-						.loggingNotification(McpSchema.LoggingMessageNotification.builder()
-								.level(McpSchema.LoggingLevel.INFO)
+						.loggingNotification(LoggingMessageNotification.builder()
+								.level(LoggingLevel.INFO)
 								.logger("test-logger")
 								.data("Another info message")
 								.build()))
 					.then(exchange // This should be sent (ERROR >= NOTICE)
-						.loggingNotification(McpSchema.LoggingMessageNotification.builder()
-								.level(McpSchema.LoggingLevel.ERROR)
+						.loggingNotification(LoggingMessageNotification.builder()
+								.level(LoggingLevel.ERROR)
 								.logger("test-logger")
 								.data("Another error message")
 								.build()))
@@ -717,13 +732,13 @@ class WebFluxSseIntegrationTests {
 			assertThat(initResult).isNotNull();
 
 			// Set minimum logging level to NOTICE
-			mcpClient.setLoggingLevel(McpSchema.LoggingLevel.NOTICE);
+			mcpClient.setLoggingLevel(LoggingLevel.NOTICE);
 
 			// Call the tool that sends logging notifications
-			CallToolResult result = mcpClient.callTool(new McpSchema.CallToolRequest("logging-test", Map.of()));
+			CallToolResult result = mcpClient.callTool(new CallToolRequest("logging-test", Map.of()));
 			assertThat(result).isNotNull();
-			assertThat(result.content().get(0)).isInstanceOf(McpSchema.TextContent.class);
-			assertThat(((McpSchema.TextContent) result.content().get(0)).text()).isEqualTo("Logging test completed");
+			assertThat(result.getContent().get(0)).isInstanceOf(TextContent.class);
+			assertThat(((TextContent) result.getContent().get(0)).getText()).isEqualTo("Logging test completed");
 
 			// Wait for notifications to be processed
 			await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
@@ -731,24 +746,23 @@ class WebFluxSseIntegrationTests {
 				// Should have received 3 notifications (1 NOTICE and 2 ERROR)
 				assertThat(receivedNotifications).hasSize(3);
 
-				Map<String, McpSchema.LoggingMessageNotification> notificationMap = receivedNotifications.stream()
-					.collect(Collectors.toMap(n -> n.data(), n -> n));
+				Map<String, LoggingMessageNotification> notificationMap = receivedNotifications.stream()
+					.collect(Collectors.toMap(n -> n.getData(), n -> n));
 
 				// First notification should be NOTICE level
-				assertThat(notificationMap.get("Notice message").level()).isEqualTo(McpSchema.LoggingLevel.NOTICE);
-				assertThat(notificationMap.get("Notice message").logger()).isEqualTo("test-logger");
-				assertThat(notificationMap.get("Notice message").data()).isEqualTo("Notice message");
+				assertThat(notificationMap.get("Notice message").getLevel()).isEqualTo(LoggingLevel.NOTICE);
+				assertThat(notificationMap.get("Notice message").getLogger()).isEqualTo("test-logger");
+				assertThat(notificationMap.get("Notice message").getData()).isEqualTo("Notice message");
 
 				// Second notification should be ERROR level
-				assertThat(notificationMap.get("Error message").level()).isEqualTo(McpSchema.LoggingLevel.ERROR);
-				assertThat(notificationMap.get("Error message").logger()).isEqualTo("test-logger");
-				assertThat(notificationMap.get("Error message").data()).isEqualTo("Error message");
+				assertThat(notificationMap.get("Error message").getLevel()).isEqualTo(LoggingLevel.ERROR);
+				assertThat(notificationMap.get("Error message").getLogger()).isEqualTo("test-logger");
+				assertThat(notificationMap.get("Error message").getData()).isEqualTo("Error message");
 
 				// Third notification should be ERROR level
-				assertThat(notificationMap.get("Another error message").level())
-					.isEqualTo(McpSchema.LoggingLevel.ERROR);
-				assertThat(notificationMap.get("Another error message").logger()).isEqualTo("test-logger");
-				assertThat(notificationMap.get("Another error message").data()).isEqualTo("Another error message");
+				assertThat(notificationMap.get("Another error message").getLevel()).isEqualTo(LoggingLevel.ERROR);
+				assertThat(notificationMap.get("Another error message").getLogger()).isEqualTo("test-logger");
+				assertThat(notificationMap.get("Another error message").getData()).isEqualTo("Another error message");
 			});
 		}
 		mcpServer.close();
@@ -763,9 +777,9 @@ class WebFluxSseIntegrationTests {
 		var clientBuilder = clientBuilders.get(clientType);
 
 		var expectedValues = List.of("python", "pytorch", "pyside");
-		var completionResponse = new McpSchema.CompleteResult(new CompleteResult.CompleteCompletion(expectedValues, 10, // total
-				true // hasMore
-		));
+		var completionResponse = new CompleteResult(expectedValues.stream()
+			.map(value -> new CompleteResultCompleteCompletion(value, 1.0))
+			.collect(Collectors.toList()));
 
 		AtomicReference<CompleteRequest> samplingRequest = new AtomicReference<>();
 		BiFunction<McpSyncServerExchange, CompleteRequest, CompleteResult> completionHandler = (mcpSyncServerExchange,
@@ -780,8 +794,8 @@ class WebFluxSseIntegrationTests {
 					new Prompt("code_review", "this is code review prompt",
 							List.of(new PromptArgument("language", "string", false))),
 					(mcpSyncServerExchange, getPromptRequest) -> null))
-			.completions(new McpServerFeatures.SyncCompletionSpecification(
-					new McpSchema.PromptReference("ref/prompt", "code_review"), completionHandler))
+			.completions(new McpServerFeatures.SyncCompletionSpecification(new PromptReference("code_review"),
+					completionHandler))
 			.build();
 
 		try (var mcpClient = clientBuilder.build()) {
@@ -789,16 +803,17 @@ class WebFluxSseIntegrationTests {
 			InitializeResult initResult = mcpClient.initialize();
 			assertThat(initResult).isNotNull();
 
-			CompleteRequest request = new CompleteRequest(new PromptReference("ref/prompt", "code_review"),
-					new CompleteRequest.CompleteArgument("language", "py"));
+			CompleteRequest request = new CompleteRequest(new PromptReference("code_review"),
+					new CompleteRequestCompleteArgument("language", "py"));
 
 			CompleteResult result = mcpClient.completeCompletion(request);
 
 			assertThat(result).isNotNull();
 
-			assertThat(samplingRequest.get().argument().name()).isEqualTo("language");
-			assertThat(samplingRequest.get().argument().value()).isEqualTo("py");
-			assertThat(samplingRequest.get().ref().type()).isEqualTo("ref/prompt");
+			assertThat(samplingRequest.get().getArgument().getName()).isEqualTo("language");
+			assertThat(samplingRequest.get().getArgument().getValue()).isEqualTo("py");
+			assertThat(samplingRequest.get().getRef().getType()).isEqualTo("ref/prompt");
+			assertThat(samplingRequest.get().getRef().getIdentifier()).isEqualTo("code_review");
 		}
 
 		mcpServer.close();

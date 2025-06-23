@@ -15,10 +15,10 @@
 */
 package io.modelcontextprotocol;
 
-import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpServerSession;
 import io.modelcontextprotocol.spec.McpServerSession.Factory;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCMessage;
 import reactor.core.publisher.Mono;
 
 /**
@@ -54,7 +54,7 @@ public class MockMcpServerTransportProvider implements McpServerTransportProvide
 		return session.closeGracefully();
 	}
 
-	public void simulateIncomingMessage(McpSchema.JSONRPCMessage message) {
+	public void simulateIncomingMessage(JSONRPCMessage message) {
 		session.handle(message).subscribe();
 	}
 

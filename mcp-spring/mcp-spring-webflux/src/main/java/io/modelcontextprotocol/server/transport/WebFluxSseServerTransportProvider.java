@@ -10,6 +10,7 @@ import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpServerSession;
 import io.modelcontextprotocol.spec.McpServerTransport;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCMessage;
 import io.modelcontextprotocol.util.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -312,7 +313,7 @@ public class WebFluxSseServerTransportProvider implements McpServerTransportProv
 
 		return request.bodyToMono(String.class).flatMap(body -> {
 			try {
-				McpSchema.JSONRPCMessage message = McpSchema.deserializeJsonRpcMessage(objectMapper, body);
+				JSONRPCMessage message = McpSchema.deserializeJsonRpcMessage(objectMapper, body);
 				return session.handle(message).flatMap(response -> ServerResponse.ok().build()).onErrorResume(error -> {
 					logger.error("Error processing  message: {}", error.getMessage());
 					// TODO: instead of signalling the error, just respond with 200 OK
@@ -338,7 +339,7 @@ public class WebFluxSseServerTransportProvider implements McpServerTransportProv
 		}
 
 		@Override
-		public Mono<Void> sendMessage(McpSchema.JSONRPCMessage message) {
+		public Mono<Void> sendMessage(JSONRPCMessage message) {
 			return Mono.fromSupplier(() -> {
 				try {
 					return objectMapper.writeValueAsString(message);

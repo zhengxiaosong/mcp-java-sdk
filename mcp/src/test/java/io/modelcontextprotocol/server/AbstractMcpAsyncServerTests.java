@@ -8,15 +8,18 @@ import java.time.Duration;
 import java.util.List;
 
 import io.modelcontextprotocol.spec.McpError;
-import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
-import io.modelcontextprotocol.spec.McpSchema.GetPromptResult;
-import io.modelcontextprotocol.spec.McpSchema.Prompt;
-import io.modelcontextprotocol.spec.McpSchema.PromptMessage;
-import io.modelcontextprotocol.spec.McpSchema.ReadResourceResult;
-import io.modelcontextprotocol.spec.McpSchema.Resource;
-import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities;
-import io.modelcontextprotocol.spec.McpSchema.Tool;
+import io.modelcontextprotocol.spec.common.Role;
+import io.modelcontextprotocol.spec.common.Root;
+import io.modelcontextprotocol.spec.content.TextContent;
+import io.modelcontextprotocol.spec.initialization.Implementation;
+import io.modelcontextprotocol.spec.initialization.ServerCapabilities;
+import io.modelcontextprotocol.spec.prompt.GetPromptResult;
+import io.modelcontextprotocol.spec.prompt.Prompt;
+import io.modelcontextprotocol.spec.prompt.PromptMessage;
+import io.modelcontextprotocol.spec.resource.ReadResourceResult;
+import io.modelcontextprotocol.spec.resource.Resource;
+import io.modelcontextprotocol.spec.tool.CallToolResult;
+import io.modelcontextprotocol.spec.tool.Tool;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,8 +72,7 @@ public abstract class AbstractMcpAsyncServerTests {
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("Transport provider must not be null");
 
-		assertThatThrownBy(
-				() -> McpServer.async(createMcpTransportProvider()).serverInfo((McpSchema.Implementation) null))
+		assertThatThrownBy(() -> McpServer.async(createMcpTransportProvider()).serverInfo((Implementation) null))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("Server info must not be null");
 	}
@@ -102,7 +104,7 @@ public abstract class AbstractMcpAsyncServerTests {
 
 	@Test
 	void testAddTool() {
-		Tool newTool = new McpSchema.Tool("new-tool", "New test tool", emptyJsonSchema);
+		Tool newTool = new Tool("new-tool", "New test tool", emptyJsonSchema);
 		var mcpAsyncServer = McpServer.async(createMcpTransportProvider())
 			.serverInfo("test-server", "1.0.0")
 			.capabilities(ServerCapabilities.builder().tools(true).build())
@@ -117,7 +119,7 @@ public abstract class AbstractMcpAsyncServerTests {
 
 	@Test
 	void testAddDuplicateTool() {
-		Tool duplicateTool = new McpSchema.Tool(TEST_TOOL_NAME, "Duplicate tool", emptyJsonSchema);
+		Tool duplicateTool = new Tool(TEST_TOOL_NAME, "Duplicate tool", emptyJsonSchema);
 
 		var mcpAsyncServer = McpServer.async(createMcpTransportProvider())
 			.serverInfo("test-server", "1.0.0")
@@ -138,7 +140,7 @@ public abstract class AbstractMcpAsyncServerTests {
 
 	@Test
 	void testRemoveTool() {
-		Tool too = new McpSchema.Tool(TEST_TOOL_NAME, "Duplicate tool", emptyJsonSchema);
+		Tool too = new Tool(TEST_TOOL_NAME, "Duplicate tool", emptyJsonSchema);
 
 		var mcpAsyncServer = McpServer.async(createMcpTransportProvider())
 			.serverInfo("test-server", "1.0.0")
@@ -167,7 +169,7 @@ public abstract class AbstractMcpAsyncServerTests {
 
 	@Test
 	void testNotifyToolsListChanged() {
-		Tool too = new McpSchema.Tool(TEST_TOOL_NAME, "Duplicate tool", emptyJsonSchema);
+		Tool too = new Tool(TEST_TOOL_NAME, "Duplicate tool", emptyJsonSchema);
 
 		var mcpAsyncServer = McpServer.async(createMcpTransportProvider())
 			.serverInfo("test-server", "1.0.0")
@@ -291,8 +293,8 @@ public abstract class AbstractMcpAsyncServerTests {
 
 		Prompt prompt = new Prompt(TEST_PROMPT_NAME, "Test Prompt", List.of());
 		McpServerFeatures.AsyncPromptSpecification specification = new McpServerFeatures.AsyncPromptSpecification(
-				prompt, (exchange, req) -> Mono.just(new GetPromptResult("Test prompt description", List
-					.of(new PromptMessage(McpSchema.Role.ASSISTANT, new McpSchema.TextContent("Test content"))))));
+				prompt, (exchange, req) -> Mono.just(new GetPromptResult("Test prompt description",
+						List.of(new PromptMessage(Role.ASSISTANT, new TextContent("Test content"))))));
 
 		StepVerifier.create(serverWithoutPrompts.addPrompt(specification)).verifyErrorSatisfies(error -> {
 			assertThat(error).isInstanceOf(McpError.class)
@@ -319,8 +321,8 @@ public abstract class AbstractMcpAsyncServerTests {
 
 		Prompt prompt = new Prompt(TEST_PROMPT_NAME_TO_REMOVE, "Test Prompt", List.of());
 		McpServerFeatures.AsyncPromptSpecification specification = new McpServerFeatures.AsyncPromptSpecification(
-				prompt, (exchange, req) -> Mono.just(new GetPromptResult("Test prompt description", List
-					.of(new PromptMessage(McpSchema.Role.ASSISTANT, new McpSchema.TextContent("Test content"))))));
+				prompt, (exchange, req) -> Mono.just(new GetPromptResult("Test prompt description",
+						List.of(new PromptMessage(Role.ASSISTANT, new TextContent("Test content"))))));
 
 		var mcpAsyncServer = McpServer.async(createMcpTransportProvider())
 			.serverInfo("test-server", "1.0.0")
@@ -356,7 +358,7 @@ public abstract class AbstractMcpAsyncServerTests {
 	@Test
 	void testRootsChangeHandlers() {
 		// Test with single consumer
-		var rootsReceived = new McpSchema.Root[1];
+		var rootsReceived = new Root[1];
 		var consumerCalled = new boolean[1];
 
 		var singleConsumerServer = McpServer.async(createMcpTransportProvider())

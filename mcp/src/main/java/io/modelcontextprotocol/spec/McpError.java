@@ -3,14 +3,14 @@
 */
 package io.modelcontextprotocol.spec;
 
-import io.modelcontextprotocol.spec.McpSchema.JSONRPCResponse.JSONRPCError;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCResponse.JSONRPCError;
 
 public class McpError extends RuntimeException {
 
 	private JSONRPCError jsonRpcError;
 
 	public McpError(JSONRPCError jsonRpcError) {
-		super(jsonRpcError.message());
+		super(jsonRpcError.getMessage());
 		this.jsonRpcError = jsonRpcError;
 	}
 

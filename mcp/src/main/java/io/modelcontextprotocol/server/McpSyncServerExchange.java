@@ -4,8 +4,12 @@
 
 package io.modelcontextprotocol.server;
 
-import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.LoggingMessageNotification;
+import io.modelcontextprotocol.spec.common.ListRootsResult;
+import io.modelcontextprotocol.spec.initialization.ClientCapabilities;
+import io.modelcontextprotocol.spec.initialization.Implementation;
+import io.modelcontextprotocol.spec.logging.LoggingMessageNotification;
+import io.modelcontextprotocol.spec.sampling.CreateMessageRequest;
+import io.modelcontextprotocol.spec.sampling.CreateMessageResult;
 
 /**
  * Represents a synchronous exchange with a Model Context Protocol (MCP) client. The
@@ -31,7 +35,7 @@ public class McpSyncServerExchange {
 	 * Get the client capabilities that define the supported features and functionality.
 	 * @return The client capabilities
 	 */
-	public McpSchema.ClientCapabilities getClientCapabilities() {
+	public ClientCapabilities getClientCapabilities() {
 		return this.exchange.getClientCapabilities();
 	}
 
@@ -39,7 +43,7 @@ public class McpSyncServerExchange {
 	 * Get the client implementation information.
 	 * @return The client implementation details
 	 */
-	public McpSchema.Implementation getClientInfo() {
+	public Implementation getClientInfo() {
 		return this.exchange.getClientInfo();
 	}
 
@@ -53,13 +57,13 @@ public class McpSyncServerExchange {
 	 * include context from MCP servers in their prompts.
 	 * @param createMessageRequest The request to create a new message
 	 * @return A result containing the details of the sampling response
-	 * @see McpSchema.CreateMessageRequest
-	 * @see McpSchema.CreateMessageResult
+	 * @see CreateMessageRequest
+	 * @see CreateMessageResult
 	 * @see <a href=
 	 * "https://spec.modelcontextprotocol.io/specification/client/sampling/">Sampling
 	 * Specification</a>
 	 */
-	public McpSchema.CreateMessageResult createMessage(McpSchema.CreateMessageRequest createMessageRequest) {
+	public CreateMessageResult createMessage(CreateMessageRequest createMessageRequest) {
 		return this.exchange.createMessage(createMessageRequest).block();
 	}
 
@@ -67,7 +71,7 @@ public class McpSyncServerExchange {
 	 * Retrieves the list of all roots provided by the client.
 	 * @return The list of roots result.
 	 */
-	public McpSchema.ListRootsResult listRoots() {
+	public ListRootsResult listRoots() {
 		return this.exchange.listRoots().block();
 	}
 
@@ -76,7 +80,7 @@ public class McpSyncServerExchange {
 	 * @param cursor Optional pagination cursor from a previous list request
 	 * @return The list of roots result
 	 */
-	public McpSchema.ListRootsResult listRoots(String cursor) {
+	public ListRootsResult listRoots(String cursor) {
 		return this.exchange.listRoots(cursor).block();
 	}
 

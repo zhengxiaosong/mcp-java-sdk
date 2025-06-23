@@ -12,7 +12,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.spec.common.Root;
+import io.modelcontextprotocol.spec.initialization.ClientCapabilities;
+import io.modelcontextprotocol.spec.initialization.Implementation;
+import io.modelcontextprotocol.spec.logging.LoggingMessageNotification;
+import io.modelcontextprotocol.spec.prompt.Prompt;
+import io.modelcontextprotocol.spec.resource.Resource;
+import io.modelcontextprotocol.spec.sampling.CreateMessageRequest;
+import io.modelcontextprotocol.spec.sampling.CreateMessageResult;
+import io.modelcontextprotocol.spec.tool.Tool;
 import io.modelcontextprotocol.util.Assert;
 import io.modelcontextprotocol.util.Utils;
 import reactor.core.publisher.Mono;
@@ -43,8 +51,8 @@ import reactor.core.scheduler.Schedulers;
  *
  * @author Dariusz Jędrzejczyk
  * @see McpClient
- * @see McpSchema.Implementation
- * @see McpSchema.ClientCapabilities
+ * @see Implementation
+ * @see ClientCapabilities
  */
 class McpClientFeatures {
 
@@ -61,12 +69,12 @@ class McpClientFeatures {
 	 * @param loggingConsumers the logging consumers.
 	 * @param samplingHandler the sampling handler.
 	 */
-	record Async(McpSchema.Implementation clientInfo, McpSchema.ClientCapabilities clientCapabilities,
-			Map<String, McpSchema.Root> roots, List<Function<List<McpSchema.Tool>, Mono<Void>>> toolsChangeConsumers,
-			List<Function<List<McpSchema.Resource>, Mono<Void>>> resourcesChangeConsumers,
-			List<Function<List<McpSchema.Prompt>, Mono<Void>>> promptsChangeConsumers,
-			List<Function<McpSchema.LoggingMessageNotification, Mono<Void>>> loggingConsumers,
-			Function<McpSchema.CreateMessageRequest, Mono<McpSchema.CreateMessageResult>> samplingHandler) {
+	record Async(Implementation clientInfo, ClientCapabilities clientCapabilities, Map<String, Root> roots,
+			List<Function<List<Tool>, Mono<Void>>> toolsChangeConsumers,
+			List<Function<List<Resource>, Mono<Void>>> resourcesChangeConsumers,
+			List<Function<List<Prompt>, Mono<Void>>> promptsChangeConsumers,
+			List<Function<LoggingMessageNotification, Mono<Void>>> loggingConsumers,
+			Function<CreateMessageRequest, Mono<CreateMessageResult>> samplingHandler) {
 
 		/**
 		 * Create an instance and validate the arguments.
@@ -78,20 +86,19 @@ class McpClientFeatures {
 		 * @param loggingConsumers the logging consumers.
 		 * @param samplingHandler the sampling handler.
 		 */
-		public Async(McpSchema.Implementation clientInfo, McpSchema.ClientCapabilities clientCapabilities,
-				Map<String, McpSchema.Root> roots,
-				List<Function<List<McpSchema.Tool>, Mono<Void>>> toolsChangeConsumers,
-				List<Function<List<McpSchema.Resource>, Mono<Void>>> resourcesChangeConsumers,
-				List<Function<List<McpSchema.Prompt>, Mono<Void>>> promptsChangeConsumers,
-				List<Function<McpSchema.LoggingMessageNotification, Mono<Void>>> loggingConsumers,
-				Function<McpSchema.CreateMessageRequest, Mono<McpSchema.CreateMessageResult>> samplingHandler) {
+		public Async(Implementation clientInfo, ClientCapabilities clientCapabilities, Map<String, Root> roots,
+				List<Function<List<Tool>, Mono<Void>>> toolsChangeConsumers,
+				List<Function<List<Resource>, Mono<Void>>> resourcesChangeConsumers,
+				List<Function<List<Prompt>, Mono<Void>>> promptsChangeConsumers,
+				List<Function<LoggingMessageNotification, Mono<Void>>> loggingConsumers,
+				Function<CreateMessageRequest, Mono<CreateMessageResult>> samplingHandler) {
 
 			Assert.notNull(clientInfo, "Client info must not be null");
 			this.clientInfo = clientInfo;
 			this.clientCapabilities = (clientCapabilities != null) ? clientCapabilities
-					: new McpSchema.ClientCapabilities(null,
-							!Utils.isEmpty(roots) ? new McpSchema.ClientCapabilities.RootCapabilities(false) : null,
-							samplingHandler != null ? new McpSchema.ClientCapabilities.Sampling() : null);
+					: new ClientCapabilities(null,
+							!Utils.isEmpty(roots) ? new ClientCapabilities.RootCapabilities(false) : null,
+							samplingHandler != null ? new ClientCapabilities.Sampling() : null);
 			this.roots = roots != null ? new ConcurrentHashMap<>(roots) : new ConcurrentHashMap<>();
 
 			this.toolsChangeConsumers = toolsChangeConsumers != null ? toolsChangeConsumers : List.of();
@@ -110,32 +117,32 @@ class McpClientFeatures {
 		 * user.
 		 */
 		public static Async fromSync(Sync syncSpec) {
-			List<Function<List<McpSchema.Tool>, Mono<Void>>> toolsChangeConsumers = new ArrayList<>();
-			for (Consumer<List<McpSchema.Tool>> consumer : syncSpec.toolsChangeConsumers()) {
+			List<Function<List<Tool>, Mono<Void>>> toolsChangeConsumers = new ArrayList<>();
+			for (Consumer<List<Tool>> consumer : syncSpec.toolsChangeConsumers()) {
 				toolsChangeConsumers.add(t -> Mono.<Void>fromRunnable(() -> consumer.accept(t))
 					.subscribeOn(Schedulers.boundedElastic()));
 			}
 
-			List<Function<List<McpSchema.Resource>, Mono<Void>>> resourcesChangeConsumers = new ArrayList<>();
-			for (Consumer<List<McpSchema.Resource>> consumer : syncSpec.resourcesChangeConsumers()) {
+			List<Function<List<Resource>, Mono<Void>>> resourcesChangeConsumers = new ArrayList<>();
+			for (Consumer<List<Resource>> consumer : syncSpec.resourcesChangeConsumers()) {
 				resourcesChangeConsumers.add(r -> Mono.<Void>fromRunnable(() -> consumer.accept(r))
 					.subscribeOn(Schedulers.boundedElastic()));
 			}
 
-			List<Function<List<McpSchema.Prompt>, Mono<Void>>> promptsChangeConsumers = new ArrayList<>();
+			List<Function<List<Prompt>, Mono<Void>>> promptsChangeConsumers = new ArrayList<>();
 
-			for (Consumer<List<McpSchema.Prompt>> consumer : syncSpec.promptsChangeConsumers()) {
+			for (Consumer<List<Prompt>> consumer : syncSpec.promptsChangeConsumers()) {
 				promptsChangeConsumers.add(p -> Mono.<Void>fromRunnable(() -> consumer.accept(p))
 					.subscribeOn(Schedulers.boundedElastic()));
 			}
 
-			List<Function<McpSchema.LoggingMessageNotification, Mono<Void>>> loggingConsumers = new ArrayList<>();
-			for (Consumer<McpSchema.LoggingMessageNotification> consumer : syncSpec.loggingConsumers()) {
+			List<Function<LoggingMessageNotification, Mono<Void>>> loggingConsumers = new ArrayList<>();
+			for (Consumer<LoggingMessageNotification> consumer : syncSpec.loggingConsumers()) {
 				loggingConsumers.add(l -> Mono.<Void>fromRunnable(() -> consumer.accept(l))
 					.subscribeOn(Schedulers.boundedElastic()));
 			}
 
-			Function<McpSchema.CreateMessageRequest, Mono<McpSchema.CreateMessageResult>> samplingHandler = r -> Mono
+			Function<CreateMessageRequest, Mono<CreateMessageResult>> samplingHandler = r -> Mono
 				.fromCallable(() -> syncSpec.samplingHandler().apply(r))
 				.subscribeOn(Schedulers.boundedElastic());
 			return new Async(syncSpec.clientInfo(), syncSpec.clientCapabilities(), syncSpec.roots(),
@@ -157,12 +164,11 @@ class McpClientFeatures {
 	 * @param loggingConsumers the logging consumers.
 	 * @param samplingHandler the sampling handler.
 	 */
-	public record Sync(McpSchema.Implementation clientInfo, McpSchema.ClientCapabilities clientCapabilities,
-			Map<String, McpSchema.Root> roots, List<Consumer<List<McpSchema.Tool>>> toolsChangeConsumers,
-			List<Consumer<List<McpSchema.Resource>>> resourcesChangeConsumers,
-			List<Consumer<List<McpSchema.Prompt>>> promptsChangeConsumers,
-			List<Consumer<McpSchema.LoggingMessageNotification>> loggingConsumers,
-			Function<McpSchema.CreateMessageRequest, McpSchema.CreateMessageResult> samplingHandler) {
+	public record Sync(Implementation clientInfo, ClientCapabilities clientCapabilities, Map<String, Root> roots,
+			List<Consumer<List<Tool>>> toolsChangeConsumers, List<Consumer<List<Resource>>> resourcesChangeConsumers,
+			List<Consumer<List<Prompt>>> promptsChangeConsumers,
+			List<Consumer<LoggingMessageNotification>> loggingConsumers,
+			Function<CreateMessageRequest, CreateMessageResult> samplingHandler) {
 
 		/**
 		 * Create an instance and validate the arguments.
@@ -175,19 +181,19 @@ class McpClientFeatures {
 		 * @param loggingConsumers the logging consumers.
 		 * @param samplingHandler the sampling handler.
 		 */
-		public Sync(McpSchema.Implementation clientInfo, McpSchema.ClientCapabilities clientCapabilities,
-				Map<String, McpSchema.Root> roots, List<Consumer<List<McpSchema.Tool>>> toolsChangeConsumers,
-				List<Consumer<List<McpSchema.Resource>>> resourcesChangeConsumers,
-				List<Consumer<List<McpSchema.Prompt>>> promptsChangeConsumers,
-				List<Consumer<McpSchema.LoggingMessageNotification>> loggingConsumers,
-				Function<McpSchema.CreateMessageRequest, McpSchema.CreateMessageResult> samplingHandler) {
+		public Sync(Implementation clientInfo, ClientCapabilities clientCapabilities, Map<String, Root> roots,
+				List<Consumer<List<Tool>>> toolsChangeConsumers,
+				List<Consumer<List<Resource>>> resourcesChangeConsumers,
+				List<Consumer<List<Prompt>>> promptsChangeConsumers,
+				List<Consumer<LoggingMessageNotification>> loggingConsumers,
+				Function<CreateMessageRequest, CreateMessageResult> samplingHandler) {
 
 			Assert.notNull(clientInfo, "Client info must not be null");
 			this.clientInfo = clientInfo;
 			this.clientCapabilities = (clientCapabilities != null) ? clientCapabilities
-					: new McpSchema.ClientCapabilities(null,
-							!Utils.isEmpty(roots) ? new McpSchema.ClientCapabilities.RootCapabilities(false) : null,
-							samplingHandler != null ? new McpSchema.ClientCapabilities.Sampling() : null);
+					: new ClientCapabilities(null,
+							!Utils.isEmpty(roots) ? new ClientCapabilities.RootCapabilities(false) : null,
+							samplingHandler != null ? new ClientCapabilities.Sampling() : null);
 			this.roots = roots != null ? new HashMap<>(roots) : new HashMap<>();
 
 			this.toolsChangeConsumers = toolsChangeConsumers != null ? toolsChangeConsumers : List.of();

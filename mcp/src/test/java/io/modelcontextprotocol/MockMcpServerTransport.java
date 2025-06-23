@@ -10,10 +10,10 @@ import java.util.function.BiConsumer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.JSONRPCNotification;
-import io.modelcontextprotocol.spec.McpSchema.JSONRPCRequest;
 import io.modelcontextprotocol.spec.McpServerTransport;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCMessage;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCNotification;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCRequest;
 import reactor.core.publisher.Mono;
 
 /**
@@ -21,35 +21,35 @@ import reactor.core.publisher.Mono;
  */
 public class MockMcpServerTransport implements McpServerTransport {
 
-	private final List<McpSchema.JSONRPCMessage> sent = new ArrayList<>();
+	private final List<JSONRPCMessage> sent = new ArrayList<>();
 
-	private final BiConsumer<MockMcpServerTransport, McpSchema.JSONRPCMessage> interceptor;
+	private final BiConsumer<MockMcpServerTransport, JSONRPCMessage> interceptor;
 
 	public MockMcpServerTransport() {
 		this((t, msg) -> {
 		});
 	}
 
-	public MockMcpServerTransport(BiConsumer<MockMcpServerTransport, McpSchema.JSONRPCMessage> interceptor) {
+	public MockMcpServerTransport(BiConsumer<MockMcpServerTransport, JSONRPCMessage> interceptor) {
 		this.interceptor = interceptor;
 	}
 
 	@Override
-	public Mono<Void> sendMessage(McpSchema.JSONRPCMessage message) {
+	public Mono<Void> sendMessage(JSONRPCMessage message) {
 		sent.add(message);
 		interceptor.accept(this, message);
 		return Mono.empty();
 	}
 
-	public McpSchema.JSONRPCRequest getLastSentMessageAsRequest() {
+	public JSONRPCRequest getLastSentMessageAsRequest() {
 		return (JSONRPCRequest) getLastSentMessage();
 	}
 
-	public McpSchema.JSONRPCNotification getLastSentMessageAsNotification() {
+	public JSONRPCNotification getLastSentMessageAsNotification() {
 		return (JSONRPCNotification) getLastSentMessage();
 	}
 
-	public McpSchema.JSONRPCMessage getLastSentMessage() {
+	public JSONRPCMessage getLastSentMessage() {
 		return !sent.isEmpty() ? sent.get(sent.size() - 1) : null;
 	}
 

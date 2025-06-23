@@ -4,8 +4,9 @@
 
 package io.modelcontextprotocol.server;
 
-import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.LoggingMessageNotification;
+import io.modelcontextprotocol.spec.initialization.Implementation;
+import io.modelcontextprotocol.spec.initialization.ServerCapabilities;
+import io.modelcontextprotocol.spec.logging.LoggingMessageNotification;
 import io.modelcontextprotocol.util.Assert;
 
 /**
@@ -122,7 +123,7 @@ public class McpSyncServer {
 	 * Get the server capabilities that define the supported features and functionality.
 	 * @return The server capabilities
 	 */
-	public McpSchema.ServerCapabilities getServerCapabilities() {
+	public ServerCapabilities getServerCapabilities() {
 		return this.asyncServer.getServerCapabilities();
 	}
 
@@ -130,7 +131,7 @@ public class McpSyncServer {
 	 * Get the server implementation information.
 	 * @return The server implementation details
 	 */
-	public McpSchema.Implementation getServerInfo() {
+	public Implementation getServerInfo() {
 		return this.asyncServer.getServerInfo();
 	}
 

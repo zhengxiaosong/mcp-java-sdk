@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.server.transport.WebMvcSseServerTransportProvider;
-import io.modelcontextprotocol.spec.McpSchema;
+import io.modelcontextprotocol.spec.initialization.Implementation;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.LifecycleState;
 import org.junit.jupiter.api.AfterEach;
@@ -80,8 +80,9 @@ class WebMvcSseCustomContextPathTests {
 	@Test
 	void testCustomContextPath() {
 		McpServer.async(mcpServerTransportProvider).serverInfo("test-server", "1.0.0").build();
-		var client = clientBuilder.clientInfo(new McpSchema.Implementation("Sample " + "client", "0.0.0")).build();
-		assertThat(client.initialize()).isNotNull();
+		try (var client = clientBuilder.clientInfo(new Implementation("Sample " + "client", "0.0.0")).build()) {
+			assertThat(client.initialize()).isNotNull();
+		}
 	}
 
 	@Configuration

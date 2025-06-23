@@ -12,9 +12,9 @@ import java.util.function.Function;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.spec.McpClientTransport;
-import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.JSONRPCNotification;
-import io.modelcontextprotocol.spec.McpSchema.JSONRPCRequest;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCMessage;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCNotification;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCRequest;
 import io.modelcontextprotocol.spec.McpServerTransport;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -28,50 +28,50 @@ import reactor.core.publisher.Sinks;
 @Deprecated
 public class MockMcpTransport implements McpClientTransport, McpServerTransport {
 
-	private final Sinks.Many<McpSchema.JSONRPCMessage> inbound = Sinks.many().unicast().onBackpressureBuffer();
+	private final Sinks.Many<JSONRPCMessage> inbound = Sinks.many().unicast().onBackpressureBuffer();
 
-	private final List<McpSchema.JSONRPCMessage> sent = new ArrayList<>();
+	private final List<JSONRPCMessage> sent = new ArrayList<>();
 
-	private final BiConsumer<MockMcpTransport, McpSchema.JSONRPCMessage> interceptor;
+	private final BiConsumer<MockMcpTransport, JSONRPCMessage> interceptor;
 
 	public MockMcpTransport() {
 		this((t, msg) -> {
 		});
 	}
 
-	public MockMcpTransport(BiConsumer<MockMcpTransport, McpSchema.JSONRPCMessage> interceptor) {
+	public MockMcpTransport(BiConsumer<MockMcpTransport, JSONRPCMessage> interceptor) {
 		this.interceptor = interceptor;
 	}
 
-	public void simulateIncomingMessage(McpSchema.JSONRPCMessage message) {
+	public void simulateIncomingMessage(JSONRPCMessage message) {
 		if (inbound.tryEmitNext(message).isFailure()) {
 			throw new RuntimeException("Failed to process incoming message " + message);
 		}
 	}
 
 	@Override
-	public Mono<Void> sendMessage(McpSchema.JSONRPCMessage message) {
+	public Mono<Void> sendMessage(JSONRPCMessage message) {
 		sent.add(message);
 		interceptor.accept(this, message);
 		return Mono.empty();
 	}
 
-	public McpSchema.JSONRPCRequest getLastSentMessageAsRequest() {
+	public JSONRPCRequest getLastSentMessageAsRequest() {
 		return (JSONRPCRequest) getLastSentMessage();
 	}
 
-	public McpSchema.JSONRPCNotification getLastSentMessageAsNotification() {
+	public JSONRPCNotification getLastSentMessageAsNotification() {
 		return (JSONRPCNotification) getLastSentMessage();
 	}
 
-	public McpSchema.JSONRPCMessage getLastSentMessage() {
+	public JSONRPCMessage getLastSentMessage() {
 		return !sent.isEmpty() ? sent.get(sent.size() - 1) : null;
 	}
 
 	private volatile boolean connected = false;
 
 	@Override
-	public Mono<Void> connect(Function<Mono<McpSchema.JSONRPCMessage>, Mono<McpSchema.JSONRPCMessage>> handler) {
+	public Mono<Void> connect(Function<Mono<JSONRPCMessage>, Mono<JSONRPCMessage>> handler) {
 		if (connected) {
 			return Mono.error(new IllegalStateException("Already connected"));
 		}

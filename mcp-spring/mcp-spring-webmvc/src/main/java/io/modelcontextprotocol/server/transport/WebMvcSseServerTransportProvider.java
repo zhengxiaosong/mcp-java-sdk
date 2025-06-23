@@ -16,6 +16,7 @@ import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpServerTransport;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
 import io.modelcontextprotocol.spec.McpServerSession;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCMessage;
 import io.modelcontextprotocol.util.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -312,7 +313,7 @@ public class WebMvcSseServerTransportProvider implements McpServerTransportProvi
 
 		try {
 			String body = request.body(String.class);
-			McpSchema.JSONRPCMessage message = McpSchema.deserializeJsonRpcMessage(objectMapper, body);
+			JSONRPCMessage message = McpSchema.deserializeJsonRpcMessage(objectMapper, body);
 
 			// Process the message through the session's handle method
 			session.handle(message).block(); // Block for WebMVC compatibility
@@ -356,7 +357,7 @@ public class WebMvcSseServerTransportProvider implements McpServerTransportProvi
 		 * @return A Mono that completes when the message has been sent
 		 */
 		@Override
-		public Mono<Void> sendMessage(McpSchema.JSONRPCMessage message) {
+		public Mono<Void> sendMessage(JSONRPCMessage message) {
 			return Mono.fromRunnable(() -> {
 				try {
 					String jsonText = objectMapper.writeValueAsString(message);

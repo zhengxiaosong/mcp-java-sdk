@@ -5,7 +5,7 @@
 package io.modelcontextprotocol.spec;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import io.modelcontextprotocol.spec.McpSchema.JSONRPCMessage;
+import io.modelcontextprotocol.spec.jsonrpc.JSONRPCMessage;
 import reactor.core.publisher.Mono;
 
 /**

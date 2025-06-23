@@ -7,9 +7,15 @@ package io.modelcontextprotocol.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.LoggingLevel;
-import io.modelcontextprotocol.spec.McpSchema.LoggingMessageNotification;
 import io.modelcontextprotocol.spec.McpServerSession;
+import io.modelcontextprotocol.spec.common.ListRootsResult;
+import io.modelcontextprotocol.spec.common.PaginatedRequest;
+import io.modelcontextprotocol.spec.initialization.ClientCapabilities;
+import io.modelcontextprotocol.spec.initialization.Implementation;
+import io.modelcontextprotocol.spec.logging.LoggingLevel;
+import io.modelcontextprotocol.spec.logging.LoggingMessageNotification;
+import io.modelcontextprotocol.spec.sampling.CreateMessageRequest;
+import io.modelcontextprotocol.spec.sampling.CreateMessageResult;
 import io.modelcontextprotocol.util.Assert;
 import reactor.core.publisher.Mono;
 
@@ -24,16 +30,16 @@ public class McpAsyncServerExchange {
 
 	private final McpServerSession session;
 
-	private final McpSchema.ClientCapabilities clientCapabilities;
+	private final ClientCapabilities clientCapabilities;
 
-	private final McpSchema.Implementation clientInfo;
+	private final Implementation clientInfo;
 
 	private volatile LoggingLevel minLoggingLevel = LoggingLevel.INFO;
 
-	private static final TypeReference<McpSchema.CreateMessageResult> CREATE_MESSAGE_RESULT_TYPE_REF = new TypeReference<>() {
+	private static final TypeReference<CreateMessageResult> CREATE_MESSAGE_RESULT_TYPE_REF = new TypeReference<>() {
 	};
 
-	private static final TypeReference<McpSchema.ListRootsResult> LIST_ROOTS_RESULT_TYPE_REF = new TypeReference<>() {
+	private static final TypeReference<ListRootsResult> LIST_ROOTS_RESULT_TYPE_REF = new TypeReference<>() {
 	};
 
 	/**
@@ -43,8 +49,8 @@ public class McpAsyncServerExchange {
 	 * features and functionality.
 	 * @param clientInfo The client implementation information.
 	 */
-	public McpAsyncServerExchange(McpServerSession session, McpSchema.ClientCapabilities clientCapabilities,
-			McpSchema.Implementation clientInfo) {
+	public McpAsyncServerExchange(McpServerSession session, ClientCapabilities clientCapabilities,
+			Implementation clientInfo) {
 		this.session = session;
 		this.clientCapabilities = clientCapabilities;
 		this.clientInfo = clientInfo;
@@ -54,7 +60,7 @@ public class McpAsyncServerExchange {
 	 * Get the client capabilities that define the supported features and functionality.
 	 * @return The client capabilities
 	 */
-	public McpSchema.ClientCapabilities getClientCapabilities() {
+	public ClientCapabilities getClientCapabilities() {
 		return this.clientCapabilities;
 	}
 
@@ -62,7 +68,7 @@ public class McpAsyncServerExchange {
 	 * Get the client implementation information.
 	 * @return The client implementation details
 	 */
-	public McpSchema.Implementation getClientInfo() {
+	public Implementation getClientInfo() {
 		return this.clientInfo;
 	}
 
@@ -76,17 +82,17 @@ public class McpAsyncServerExchange {
 	 * include context from MCP servers in their prompts.
 	 * @param createMessageRequest The request to create a new message
 	 * @return A Mono that completes when the message has been created
-	 * @see McpSchema.CreateMessageRequest
-	 * @see McpSchema.CreateMessageResult
+	 * @see CreateMessageRequest
+	 * @see CreateMessageResult
 	 * @see <a href=
 	 * "https://spec.modelcontextprotocol.io/specification/client/sampling/">Sampling
 	 * Specification</a>
 	 */
-	public Mono<McpSchema.CreateMessageResult> createMessage(McpSchema.CreateMessageRequest createMessageRequest) {
+	public Mono<CreateMessageResult> createMessage(CreateMessageRequest createMessageRequest) {
 		if (this.clientCapabilities == null) {
 			return Mono.error(new McpError("Client must be initialized. Call the initialize method first!"));
 		}
-		if (this.clientCapabilities.sampling() == null) {
+		if (this.clientCapabilities.getSampling() == null) {
 			return Mono.error(new McpError("Client must be configured with sampling capabilities"));
 		}
 		return this.session.sendRequest(McpSchema.METHOD_SAMPLING_CREATE_MESSAGE, createMessageRequest,
@@ -97,7 +103,7 @@ public class McpAsyncServerExchange {
 	 * Retrieves the list of all roots provided by the client.
 	 * @return A Mono that emits the list of roots result.
 	 */
-	public Mono<McpSchema.ListRootsResult> listRoots() {
+	public Mono<ListRootsResult> listRoots() {
 		return this.listRoots(null);
 	}
 
@@ -106,8 +112,8 @@ public class McpAsyncServerExchange {
 	 * @param cursor Optional pagination cursor from a previous list request
 	 * @return A Mono that emits the list of roots result containing
 	 */
-	public Mono<McpSchema.ListRootsResult> listRoots(String cursor) {
-		return this.session.sendRequest(McpSchema.METHOD_ROOTS_LIST, new McpSchema.PaginatedRequest(cursor),
+	public Mono<ListRootsResult> listRoots(String cursor) {
+		return this.session.sendRequest(McpSchema.METHOD_ROOTS_LIST, new PaginatedRequest(cursor),
 				LIST_ROOTS_RESULT_TYPE_REF);
 	}
 
@@ -124,7 +130,7 @@ public class McpAsyncServerExchange {
 		}
 
 		return Mono.defer(() -> {
-			if (this.isNotificationForLevelAllowed(loggingMessageNotification.level())) {
+			if (this.isNotificationForLevelAllowed(loggingMessageNotification.getLevel())) {
 				return this.session.sendNotification(McpSchema.METHOD_NOTIFICATION_MESSAGE, loggingMessageNotification);
 			}
 			return Mono.empty();
@@ -142,7 +148,7 @@ public class McpAsyncServerExchange {
 	}
 
 	private boolean isNotificationForLevelAllowed(LoggingLevel loggingLevel) {
-		return loggingLevel.level() >= this.minLoggingLevel.level();
+		return loggingLevel.ordinal() >= this.minLoggingLevel.ordinal();
 	}
 
 }
