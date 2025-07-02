@@ -6,11 +6,12 @@
 
     <parent>
         <groupId>io.modelcontextprotocol.sdk</groupId>
-        <artifactId>mcp-parent</artifactId>
-        <version>0.10.1-sp276-j11-SNAPSHOT</version>
+        <artifactId>mcp-j11-parent</artifactId>
+        <version>0.1.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>mcp-bom</artifactId>
+    <artifactId>mcp-j11-bom</artifactId>
     <packaging>pom</packaging>
 
     <name>Java SDK MCP BOM</name>
@@ -29,28 +30,28 @@
             <!-- Core MCP -->
             <dependency>
                 <groupId>io.modelcontextprotocol.sdk</groupId>
-                <artifactId>mcp</artifactId>
+                <artifactId>mcp-j11</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <!-- MCP Test -->
             <dependency>
                 <groupId>io.modelcontextprotocol.sdk</groupId>
-                <artifactId>mcp-test</artifactId>
+                <artifactId>mcp-j11-test</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <!-- MCP Transport - WebFlux SSE -->
             <dependency>
                 <groupId>io.modelcontextprotocol.sdk</groupId>
-                <artifactId>mcp-spring-webflux</artifactId>
+                <artifactId>mcp-j11-spring2-webflux</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <!-- MCP Transport - WebMVC SSE -->
             <dependency>
                 <groupId>io.modelcontextprotocol.sdk</groupId>
-                <artifactId>mcp-spring-webmvc</artifactId>
+                <artifactId>mcp-j11-spring2-webmvc</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

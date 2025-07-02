@@ -5,10 +5,11 @@
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>io.modelcontextprotocol.sdk</groupId>
-		<artifactId>mcp-parent</artifactId>
-		<version>0.10.1-sp276-j11-SNAPSHOT</version>
+		<artifactId>mcp-j11-parent</artifactId>
+		<version>0.1.1-SNAPSHOT</version>
+		<relativePath>../pom.xml</relativePath>
 	</parent>
-	<artifactId>mcp</artifactId>
+	<artifactId>mcp-j11</artifactId>
 	<packaging>jar</packaging>
 	<name>Java MCP SDK</name>
 	<description>Java SDK implementation of the Model Context Protocol, enabling seamless integration with language models and AI tools</description>

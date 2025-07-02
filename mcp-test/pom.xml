@@ -5,10 +5,11 @@
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>io.modelcontextprotocol.sdk</groupId>
-		<artifactId>mcp-parent</artifactId>
-		<version>0.10.1-sp276-j11-SNAPSHOT</version>
+		<artifactId>mcp-j11-parent</artifactId>
+		<version>0.1.1-SNAPSHOT</version>
+		<relativePath>../pom.xml</relativePath>
 	</parent>
-	<artifactId>mcp-test</artifactId>
+	<artifactId>mcp-j11-test</artifactId>
 	<packaging>jar</packaging>
 	<name>Tests for the Java MCP SDK</name>
 	<description>Provides some shared test fasilities for the MCP Java SDK</description>
@@ -23,8 +24,8 @@
 	<dependencies>
 		<dependency>
 			<groupId>io.modelcontextprotocol.sdk</groupId>
-			<artifactId>mcp</artifactId>
-			<version>0.10.1-sp276-j11-SNAPSHOT</version>
+			<artifactId>mcp-j11</artifactId>
+			<version>0.1.1-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
